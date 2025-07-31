@@ -22,16 +22,16 @@ set(INCLUDE_DIR
    ${PARENT_DIR}/source/library/RTOS
    ${PARENT_DIR}/source/library/comm/message_passer
    ${PARENT_DIR}/app/library
-   ${PARENT_DIR}/library/FreeRTOS
-   ${PARENT_DIR}/library/FreeRTOS/include
-   ${PARENT_DIR}/library/FreeRTOS/portable/MSVC-MingW
-   ${PARENT_DIR}/library/FreeRTOS-Plus/FreeRTOS-Plus-Trace/include
-   ${PARENT_DIR}/library/FreeRTOS-Plus/FreeRTOS-Plus-Trace/config
-   ${PARENT_DIR}/library/FreeRTOS-Plus/FreeRTOS-Plus-Trace/kernelports/FreeRTOS/config
-   ${PARENT_DIR}/library/FreeRTOS-Plus/FreeRTOS-Plus-Trace/kernelports/FreeRTOS/include
+   ${PARENT_DIR}/thirdparty/FreeRTOS
+   ${PARENT_DIR}/thirdparty/FreeRTOS/include
+   ${PARENT_DIR}/thirdparty/FreeRTOS/portable/MSVC-MingW
+   ${PARENT_DIR}/thirdparty/FreeRTOS-Plus/FreeRTOS-Plus-Trace/include
+   ${PARENT_DIR}/thirdparty/FreeRTOS-Plus/FreeRTOS-Plus-Trace/config
+   ${PARENT_DIR}/thirdparty/FreeRTOS-Plus/FreeRTOS-Plus-Trace/kernelports/FreeRTOS/config
+   ${PARENT_DIR}/thirdparty/FreeRTOS-Plus/FreeRTOS-Plus-Trace/kernelports/FreeRTOS/include
    )
    
-set(SOURCE_DIR ${PARENT_DIR}/source)
+set(SOURCE_DIR ${PARENT_DIR}/source) 
 set(MOCK_DIR ${PARENT_DIR}/unit_test/mocks)
 
 enable_testing()
