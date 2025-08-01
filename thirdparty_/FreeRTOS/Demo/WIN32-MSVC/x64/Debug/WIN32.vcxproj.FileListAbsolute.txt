@@ -1,0 +1,2 @@
+D:\git_repository_others\FreeRTOS\FreeRTOS\Demo\WIN32-MSVC\x64\Debug\RTOSDemo.exe
+D:\git_repository\Embedded_Lab\thirdparty\어치\FreeRTOS\Demo\WIN32-MSVC\x64\Debug\RTOSDemo.exe

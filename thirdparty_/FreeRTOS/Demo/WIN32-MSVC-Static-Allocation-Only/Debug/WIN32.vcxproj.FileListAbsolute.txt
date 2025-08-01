@@ -1,0 +1,2 @@
+D:\git_repository\Embedded_Lab\thirdparty\어치\FreeRTOS\Demo\WIN32-MSVC-Static-Allocation-Only\Debug\RTOSDemo.exe
+D:\git_repository\Embedded_Lab\thirdparty_\FreeRTOS\Demo\WIN32-MSVC-Static-Allocation-Only\Debug\RTOSDemo.exe
