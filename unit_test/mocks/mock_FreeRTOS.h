@@ -24,6 +24,7 @@ class IFreeRTOSMock
 public:
     virtual QueueHandle_t xQueueCreateMutex( const uint8_t ucQueueType ) = 0;
     virtual QueueHandle_t xQueueCreateCountingSemaphore( const UBaseType_t uxMaxCount, const UBaseType_t uxInitialCount ) = 0;
+    virtual QueueHandle_t xQueueCreateCountingSemaphoreStatic( const UBaseType_t uxMaxCount, const UBaseType_t uxInitialCount, StaticQueue_t* pxStaticQueue ) = 0;
     virtual BaseType_t xQueueSemaphoreTake( QueueHandle_t xQueue, TickType_t xTicksToWait ) = 0;
     virtual BaseType_t xQueueGenericSend( QueueHandle_t xQueue, const void * const pvItemToQueue, TickType_t xTicksToWait, const BaseType_t xCopyPosition ) = 0;
     virtual TickType_t xTaskGetTickCount( void ) = 0;    
@@ -34,6 +35,7 @@ class FreeRTOSMock : public IFreeRTOSMock
 public:
     MOCK_METHOD( QueueHandle_t, xQueueCreateMutex, ( const uint8_t ) );
     MOCK_METHOD( QueueHandle_t, xQueueCreateCountingSemaphore, ( const UBaseType_t uxMaxCount, const UBaseType_t uxInitialCount ) );
+    MOCK_METHOD( QueueHandle_t, xQueueCreateCountingSemaphoreStatic, ( const UBaseType_t uxMaxCount, const UBaseType_t uxInitialCount, StaticQueue_t* pxStaticQueue ) );
     MOCK_METHOD( BaseType_t, xQueueSemaphoreTake, ( QueueHandle_t xQueue, TickType_t xTicksToWait ) );
     MOCK_METHOD( BaseType_t, xQueueGenericSend, ( QueueHandle_t xQueue, const void * const pvItemToQueue, TickType_t xTicksToWait, const BaseType_t xCopyPosition ) );
     MOCK_METHOD( TickType_t, xTaskGetTickCount, ( ) );

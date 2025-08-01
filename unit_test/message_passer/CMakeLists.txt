@@ -20,20 +20,18 @@ include(GoogleTest)
 target_include_directories(message_passer_test PRIVATE
     # message_passer test include path
     .
+
     # Common project and library include paths
     ../../source/common
     ../../source/library/RTOS
     ../../source/library/comm/message_passer
     ../../app/library
+
     # FreeRTOS-related include paths
-    ../../thirdparty/FreeRTOS
-    ../../thirdparty/FreeRTOS/include
-    ../../thirdparty/FreeRTOS/portable/MSVC-MingW
-    # FreeRTOS-Plus-Trace related include paths
-    ../../thirdparty/FreeRTOS-Plus/FreeRTOS-Plus-Trace/include
-    ../../thirdparty/FreeRTOS-Plus/FreeRTOS-Plus-Trace/config
-    ../../thirdparty/FreeRTOS-Plus/FreeRTOS-Plus-Trace/kernelports/FreeRTOS/config
-    ../../thirdparty/FreeRTOS-Plus/FreeRTOS-Plus-Trace/kernelports/FreeRTOS/include
+    ../../thirdparty/FreeRTOS/FreeRTOS
+    ../../thirdparty/FreeRTOS/FreeRTOS/include
+    ../../thirdparty/FreeRTOS/FreeRTOS/portable/MSVC-MingW
+
     # Mock file include path
     ../mocks
 )
