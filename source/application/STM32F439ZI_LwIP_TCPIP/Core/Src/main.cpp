@@ -28,14 +28,14 @@ const osThreadAttr_t defaultTask_attributes =
 /**************************************** Local Functions ******************************************/
 static void MX_GPIO_Init         ( );
 static void MX_USART2_UART_Init  ( );
-void        SystemClock_Config   ( );
-void        StartDefaultTask     ( void *argument );
+static void SystemClock_Config   ( );
+static void StartDefaultTask     ( void *argument );
 
 /*************************************** Function Definitions **************************************/
 /**
-  * @brief  The application entry point.
-  * @retval int
-  */
+ * @brief  The application entry point.
+ * @retval int
+ */
 int main(void)
 {
    HAL_Init();
@@ -44,12 +44,11 @@ int main(void)
    MX_GPIO_Init();
    MX_USART2_UART_Init();
 
-   LOGGING("Welcome to STM32F439ZI with LwIP and FreeRTOS!\r\n");
+   LOGGING("Welcome!\r\n");
 
-   /* Init scheduler */
    osKernelInitialize();
 
-   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
+   defaultTaskHandle = osThreadNew( StartDefaultTask, NULL, &defaultTask_attributes );
 
    osKernelStart();
 
@@ -58,10 +57,26 @@ int main(void)
 }
 
 /**
-  * @brief System Clock Configuration
-  * @retval None
-  */
-void SystemClock_Config(void)
+ * @brief  Function implementing the defaultTask thread.
+ * @param  argument: Not used
+ * @retval None
+ */
+static void StartDefaultTask(void *argument)
+{
+   MX_LWIP_Init();
+
+   for(;;)
+   {    
+      osDelay(1000);
+      LOGGING( "Default Task Running...\r\n" );
+   }
+}
+
+/**
+ * @brief System Clock Configuration
+ * @retval None
+ */
+static void SystemClock_Config(void)
 {
    RCC_OscInitTypeDef RCC_OscInitStruct = {0};
    RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
@@ -111,10 +126,10 @@ void SystemClock_Config(void)
 }
 
 /**
-  * @brief USART2 Initialization Function
-  * @param None
-  * @retval None
-  */
+ * @brief USART2 Initialization Function
+ * @param None
+ * @retval None
+ */
 static void MX_USART2_UART_Init(void)
 {
    huart2.Instance = USART2;
@@ -131,17 +146,23 @@ static void MX_USART2_UART_Init(void)
    }
 }
 
-int __io_putchar(int ch)
+/**
+ * @brief Redirects the C library printf function to the USART2.
+ * @param file: File descriptor (not used)
+ * @param ptr: Pointer to the data to be sent
+ * @param len: Length of the data to be sent
+ * @retval Number of bytes written
+ */
+extern "C" int _write(int file, char *ptr, int len)
 {
-   HAL_UART_Transmit(&huart2, (uint8_t*)&ch, 1, HAL_MAX_DELAY);
-   return ch;
+   HAL_UART_Transmit(&huart2, (uint8_t*)ptr, len, HAL_MAX_DELAY);
 }
 
 /**
-  * @brief GPIO Initialization Function
-  * @param None
-  * @retval None
-  */
+ * @brief GPIO Initialization Function
+ * @param None
+ * @retval None
+ */
 static void MX_GPIO_Init(void)
 {
    /* GPIO Ports Clock Enable */
@@ -153,28 +174,12 @@ static void MX_GPIO_Init(void)
 }
 
 /**
-  * @brief  Function implementing the defaultTask thread.
-  * @param  argument: Not used
-  * @retval None
-  */
-void StartDefaultTask(void *argument)
-{
-   MX_LWIP_Init();
-
-   for(;;)
-   {    
-      osDelay(1000);
-   }
-}
-
-/**
-  * @brief  Period elapsed callback in non blocking mode
-  * @note   This function is called  when TIM1 interrupt took place, inside
-  * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
-  * a global variable "uwTick" used as application time base.
-  * @param  htim : TIM handle
-  * @retval None
-  */
+ * @brief  Period elapsed callback in non blocking mode
+ * @note   This function is called  when TIM1 interrupt took place, inside
+ *         HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment a global variable "uwTick" used as application time base.
+ * @param  htim : TIM handle
+ * @retval None
+ */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
    if (htim->Instance == TIM1) 
@@ -184,9 +189,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 }
 
 /**
-  * @brief  This function is executed in case of error occurrence.
-  * @retval None
-  */
+ * @brief  This function is executed in case of error occurrence.
+ * @retval None
+ */
 void Error_Handler(void)
 {
    __disable_irq();
@@ -196,12 +201,12 @@ void Error_Handler(void)
 
 #ifdef  USE_FULL_ASSERT
 /**
-  * @brief  Reports the name of the source file and the source line number
-  *         where the assert_param error has occurred.
-  * @param  file: pointer to the source file name
-  * @param  line: assert_param error line source number
-  * @retval None
-  */
+ * @brief  Reports the name of the source file and the source line number
+ *         where the assert_param error has occurred.
+ * @param  file: pointer to the source file name
+ * @param  line: assert_param error line source number
+ * @retval None
+ */
 void assert_failed(uint8_t *file, uint32_t line)
 {
 
