@@ -27,6 +27,7 @@
 #endif /* MDK ARM Compiler */
 #include "ethernetif.h"
 #include <string.h>
+#include "stm32f4xx_nucleo_144.h"
 
 /* USER CODE BEGIN 0 */
 
@@ -62,10 +63,15 @@ void MX_LWIP_Init(void)
   /* Initialize the LwIP stack with RTOS */
   tcpip_init( NULL, NULL );
 
-  /* IP addresses initialization with DHCP (IPv4) */
-  ipaddr.addr = 0;
-  netmask.addr = 0;
-  gw.addr = 0;
+  /* USER CODE BEGIN LWIP_INIT_STATIC_IP */
+  ip_addr_t ipaddr;
+  ip_addr_t netmask;
+  ip_addr_t gw;
+
+  IP4_ADDR(&ipaddr, 192, 168, 1, 3);      
+  IP4_ADDR(&netmask, 255, 255, 255, 0);  
+  IP4_ADDR(&gw, 192, 168, 1, 1); 
+  /* USER CODE END LWIP_INIT_STATIC_IP */
 
   /* add the network interface (IPv4/IPv6) with RTOS */
   netif_add(&gnetif, &ipaddr, &netmask, &gw, NULL, &ethernetif_init, &tcpip_input);
@@ -112,13 +118,15 @@ static void ethernet_link_status_updated(struct netif *netif)
 {
   if (netif_is_up(netif))
   {
-/* USER CODE BEGIN 5 */
-/* USER CODE END 5 */
+    #if defined (DEBUG_ETHERNET)
+    BSP_LED_On( LED_GREEN );
+    #endif
   }
   else /* netif is down */
   {
-/* USER CODE BEGIN 6 */
-/* USER CODE END 6 */
+    #if defined (DEBUG_ETHERNET)
+    BSP_LED_Off( LED_GREEN );
+    #endif
   }
 }
 
