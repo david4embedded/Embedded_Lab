@@ -9,9 +9,8 @@
 
 
 /****************************************** Includes ***********************************************/
-
-#include "common.h"
 #include "main.h"
+#include "common.h"
 #include "cmsis_os.h"
 #include "lwip.h"
 #include "stm32f4xx_nucleo_144.h"
@@ -72,7 +71,7 @@ static void StartDefaultTask(void *argument)
    for(;;)
    {    
       osDelay(1000);
-      LOGGING( "Default Task Running...\r\n" );
+      LOGGING( "Default Task\r\n" );
       BSP_LED_Toggle( LED_BLUE );
    }
 }
