@@ -17,6 +17,7 @@
   */
 
 /* Includes ------------------------------------------------------------------*/
+#include "common.h"
 #include "main.h"
 #include "cmsis_os.h"
 #include "lwip.h"
@@ -50,7 +51,7 @@ int main(void)
   MX_GPIO_Init();
   MX_USART2_UART_Init();
 
-  HAL_UART_Transmit( &huart2, (uint8_t *)"Welcome!!\r\n", 33, HAL_MAX_DELAY);
+  LOGGING("Welcome to STM32F439ZI with LwIP and FreeRTOS!\r\n");
 
   /* Init scheduler */
   osKernelInitialize();
@@ -135,6 +136,12 @@ static void MX_USART2_UART_Init(void)
   {
     Error_Handler();
   }
+}
+
+int __io_putchar(int ch)
+{
+    HAL_UART_Transmit(&huart2, (uint8_t*)&ch, 1, HAL_MAX_DELAY);
+    return ch;
 }
 
 /**
