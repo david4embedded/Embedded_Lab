@@ -24,6 +24,7 @@ target_include_directories(stm32cubemx INTERFACE
     ../../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2
     ../../Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F
     ../../Drivers/BSP/Components/lan8742
+    ../../Drivers/BSP/STM32F4xx_Nucleo_144
     ../../Middlewares/Third_Party/LwIP/src/include/netif/ppp
     ../../Drivers/CMSIS/Device/ST/STM32F4xx/Include
     ../../Middlewares/Third_Party/LwIP/src/include/lwip
@@ -50,6 +51,7 @@ target_sources(stm32cubemx INTERFACE
     ../../LWIP/App/lwip.c
     ../../Drivers/BSP/Components/lan8742/lan8742.c
     ../../Drivers/BSP/Components/lan8742/lan8742.c
+    ../../Drivers/BSP/STM32F4xx_Nucleo_144/stm32f4xx_nucleo_144.c
     ../../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc.c
     ../../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc_ex.c
     ../../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash.c

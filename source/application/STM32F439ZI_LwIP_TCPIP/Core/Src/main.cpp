@@ -14,6 +14,7 @@
 #include "main.h"
 #include "cmsis_os.h"
 #include "lwip.h"
+#include "stm32f4xx_nucleo_144.h"
 
 /**************************************** Static Variables *****************************************/
 UART_HandleTypeDef huart2;
@@ -43,6 +44,9 @@ int main(void)
 
    MX_GPIO_Init();
    MX_USART2_UART_Init();
+   BSP_LED_Init( LED_RED );
+   BSP_LED_Init( LED_GREEN );
+   BSP_LED_Init( LED_BLUE );
 
    LOGGING("Welcome!\r\n");
 
@@ -69,6 +73,7 @@ static void StartDefaultTask(void *argument)
    {    
       osDelay(1000);
       LOGGING( "Default Task Running...\r\n" );
+      BSP_LED_Toggle( LED_BLUE );
    }
 }
 
