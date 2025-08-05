@@ -27,7 +27,6 @@
 #endif /* MDK ARM Compiler */
 #include "ethernetif.h"
 #include <string.h>
-#include "stm32f4xx_nucleo_144.h"
 
 /* USER CODE BEGIN 0 */
 
@@ -46,6 +45,7 @@ struct netif gnetif;
 ip4_addr_t ipaddr;
 ip4_addr_t netmask;
 ip4_addr_t gw;
+
 /* USER CODE BEGIN OS_THREAD_ATTR_CMSIS_RTOS_V2 */
 #define INTERFACE_THREAD_STACK_SIZE ( 1024 )
 osThreadAttr_t attributes;
@@ -63,15 +63,10 @@ void MX_LWIP_Init(void)
   /* Initialize the LwIP stack with RTOS */
   tcpip_init( NULL, NULL );
 
-  /* USER CODE BEGIN LWIP_INIT_STATIC_IP */
-  ip_addr_t ipaddr;
-  ip_addr_t netmask;
-  ip_addr_t gw;
-
-  IP4_ADDR(&ipaddr, 192, 168, 1, 3);      
-  IP4_ADDR(&netmask, 255, 255, 255, 0);  
-  IP4_ADDR(&gw, 192, 168, 1, 1); 
-  /* USER CODE END LWIP_INIT_STATIC_IP */
+  /* IP addresses initialization without DHCP (IPv4) */
+  IP4_ADDR(&ipaddr, 192, 168, 1, 3 );
+  IP4_ADDR(&netmask, 255, 255, 255, 0 );
+  IP4_ADDR(&gw, 0, 0, 0, 0);
 
   /* add the network interface (IPv4/IPv6) with RTOS */
   netif_add(&gnetif, &ipaddr, &netmask, &gw, NULL, &ethernetif_init, &tcpip_input);
@@ -93,9 +88,6 @@ void MX_LWIP_Init(void)
   attributes.priority = osPriorityBelowNormal;
   osThreadNew(ethernet_link_thread, &gnetif, &attributes);
 /* USER CODE END H7_OS_THREAD_NEW_CMSIS_RTOS_V2 */
-
-  /* Start DHCP negotiation for a network interface (IPv4) */
-  dhcp_start(&gnetif);
 
 /* USER CODE BEGIN 3 */
 
