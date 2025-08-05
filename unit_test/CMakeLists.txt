@@ -28,3 +28,4 @@ FetchContent_MakeAvailable(googletest)
 # Include the message_passer test suite as a subdirectory.
 # This command processes the CMakeLists.txt file in the message_passer subdirectory.
 add_subdirectory(message_passer)
+add_subdirectory(ring_buffer)
