@@ -17,7 +17,7 @@
 
 /******************************************** Consts ***********************************************/
 //#define TCP_LOOPBACK_TEST
-#define TCP_ECHO_SERVER_TEST
+//#define TCP_ECHO_SERVER_TEST
 
 #if defined (TCP_LOOPBACK_TEST)
 #define LOOPBACK_TEST_PORT 1234
