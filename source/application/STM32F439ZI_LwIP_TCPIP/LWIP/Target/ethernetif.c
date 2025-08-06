@@ -386,6 +386,9 @@ static err_t low_level_output(struct netif *netif, struct pbuf *p)
 
   pbuf_ref(p);
 
+  //LOGGING( "low_level_output: Sending packet of size %d bytes.", p->tot_len );
+  printf( "tx\r\n" );
+
   if (HAL_ETH_Transmit_IT(&heth, &TxConfig) == HAL_OK) {
     while(osSemaphoreAcquire(TxPktSemaphore, TIME_WAITING_FOR_INPUT)!=osOK)
 
@@ -444,7 +447,7 @@ void ethernetif_input(void* argument)
         if (p != NULL)
         {
           #if defined (DEBUG_ETHERNET)
-          LOGGING( "Pkt from H/W!\r\n" );
+          //LOGGING( "Pkt from H/W!\r\n" );
           #endif
           if (netif->input( p, netif) != ERR_OK )
           {
