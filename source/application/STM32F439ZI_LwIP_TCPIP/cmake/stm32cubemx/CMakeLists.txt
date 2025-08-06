@@ -10,6 +10,8 @@ target_compile_definitions(stm32cubemx INTERFACE
 	USE_HAL_DRIVER 
 	STM32F439xx
     $<$<CONFIG:Debug>:DEBUG>
+   LWIP_DEBUG
+   LWIP_ICMP
 )
 
 target_include_directories(stm32cubemx INTERFACE
