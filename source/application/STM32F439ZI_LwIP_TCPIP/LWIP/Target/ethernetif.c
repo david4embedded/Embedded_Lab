@@ -391,13 +391,14 @@ static err_t low_level_output(struct netif *netif, struct pbuf *p)
 
   if (HAL_ETH_Transmit_IT(&heth, &TxConfig) == HAL_OK) {
     while(osSemaphoreAcquire(TxPktSemaphore, TIME_WAITING_FOR_INPUT)!=osOK)
-
     {
+      
     }
 
     HAL_ETH_ReleaseTxPacket(&heth);
   } else {
     pbuf_free(p);
+    printf( "tx Error\r\n" );
   }
 
   return errval;
