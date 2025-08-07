@@ -19,6 +19,7 @@
 /* USER CODE END Header */
 
 /* Includes ------------------------------------------------------------------*/
+#include "stm32f4xx_nucleo_144.h"
 #include "lwip.h"
 #include "lwip/init.h"
 #include "lwip/netif.h"
@@ -110,15 +111,11 @@ static void ethernet_link_status_updated(struct netif *netif)
 {
   if (netif_is_up(netif))
   {
-    #if defined (DEBUG_ETHERNET)
     BSP_LED_On( LED_GREEN );
-    #endif
   }
   else /* netif is down */
   {
-    #if defined (DEBUG_ETHERNET)
     BSP_LED_Off( LED_GREEN );
-    #endif
   }
 }
 

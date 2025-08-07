@@ -6,7 +6,6 @@
 #include <stdio.h>
 
 #define USE_LOGGER
-#define DEBUG_ETHERNET
 
 #if defined (USE_LOGGER)
 #define LOGGING( format, ... ) printf( "%08ld: " format "\r\n", xTaskGetTickCount(), ##__VA_ARGS__ )

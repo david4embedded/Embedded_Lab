@@ -19,7 +19,6 @@
 /* USER CODE END Header */
 
 /* Includes ------------------------------------------------------------------*/
-#include "common.h"
 #include "main.h"
 #include "lwip/opt.h"
 #include "lwip/timeouts.h"
@@ -31,9 +30,6 @@
 #include <string.h>
 #include "cmsis_os.h"
 #include "lwip/tcpip.h"
-#if defined (DEBUG_ETHERNET)
-#include "stm32f4xx_nucleo_144.h"
-#endif
 
 /* Within 'USER CODE' section, code will be kept by default at each generation */
 /* USER CODE BEGIN 0 */
@@ -458,9 +454,6 @@ void ethernetif_input(void* argument)
         p = low_level_input( netif );
         if (p != NULL)
         {
-          #if defined (DEBUG_ETHERNET)
-          //LOGGING( "Pkt from H/W!\r\n" );
-          #endif
           if (netif->input( p, netif) != ERR_OK )
           {
             pbuf_free(p);
@@ -794,17 +787,6 @@ void ethernet_link_thread(void* argument)
   for(;;)
   {
   PHYLinkState = LAN8742_GetLinkState(&LAN8742);
-
-  #if defined (DEBUG_ETHERNET)
-  if ( netif_is_link_up(netif) )
-  {
-    BSP_LED_On( LED_GREEN );
-  }
-  else
-  {
-    BSP_LED_Off( LED_GREEN );
-  }
-  #endif
 
   if(netif_is_link_up(netif) && (PHYLinkState <= LAN8742_STATUS_LINK_DOWN))
   {
