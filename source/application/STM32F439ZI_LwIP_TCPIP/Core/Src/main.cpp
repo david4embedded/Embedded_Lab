@@ -240,8 +240,8 @@ void assert_failed(uint8_t *file, uint32_t line)
  */
 static void initTcpEchoServer( )
 {
-   ip_addr_t ip_addr;
-   IP4_ADDR( &ip_addr, ECHO_SERVER_ADDR_0, ECHO_SERVER_ADDR_1, ECHO_SERVER_ADDR_2, ECHO_SERVER_ADDR_3 );
+   ip_addr_t ipAddr;
+   IP4_ADDR( &ipAddr, ECHO_SERVER_ADDR_0, ECHO_SERVER_ADDR_1, ECHO_SERVER_ADDR_2, ECHO_SERVER_ADDR_3 );
 
    echoServerPcb = tcp_new();
    if ( echoServerPcb == nullptr ) 
@@ -250,7 +250,7 @@ static void initTcpEchoServer( )
       return;
    }
 
-   if ( tcp_bind( echoServerPcb, &ip_addr, ECHO_SERVER_PORT ) == ERR_OK )
+   if ( tcp_bind( echoServerPcb, &ipAddr, ECHO_SERVER_PORT ) == ERR_OK )
    {
       echoServerPcb = tcp_listen( echoServerPcb );
       tcp_accept( echoServerPcb, echoAcceptCallback );
@@ -315,7 +315,7 @@ static err_t echoRecvCallback( void *arg, struct tcp_pcb *tpcb, struct pbuf *p, 
       return ERR_OK;
    }
 
-   LOGGING( "Received data: %s\n", (char*)p->payload );
+   LOGGING( "Received data: len=%d, %s\n", p->len, (char*)p->payload );
 
    //!< Echo the received data back to the client
    tcp_write( tpcb, p->payload, p->len, 1 );
