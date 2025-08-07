@@ -83,7 +83,7 @@ int main(void)
    BSP_LED_Init( LED_GREEN );
    BSP_LED_Init( LED_BLUE );
 
-   LOGGING("Welcome to STM32F439ZI LwIP TCP/IP Application\r\n");
+   LOGGING( "Welcome to STM32F439ZI LwIP TCP/IP Application" );
 
    osKernelInitialize();
 
@@ -115,7 +115,7 @@ static void StartDefaultTask(void *argument)
    for(;;)
    {    
       osDelay(1000);
-      //LOGGING( "Default Task\r\n" );
+      LOGGING( "Default Task" );
       BSP_LED_Toggle( LED_BLUE );
    }
 }
