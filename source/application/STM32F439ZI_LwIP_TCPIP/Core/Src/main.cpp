@@ -254,11 +254,11 @@ static void initTcpEchoServer( )
    {
       echoServerPcb = tcp_listen( echoServerPcb );
       tcp_accept( echoServerPcb, echoAcceptCallback );
-      LOGGING( "TCP Echo Server is listening on port %d...", ECHO_SERVER_PORT );
+      LOGGING( "TCPIP: Echo Server is listening on port %d...", ECHO_SERVER_PORT );
    }
    else
    {
-      LOGGING( "Failed to bind PCB." );
+      LOGGING( "TCPIP: Failed to bind PCB." );
       tcp_abort( echoServerPcb );
       echoServerPcb = nullptr;
    }
@@ -277,7 +277,7 @@ static err_t echoAcceptCallback( void *arg, struct tcp_pcb *newpcb, err_t err )
    (void)arg;
    (void)err;
 
-   LOGGING( "Client connected." );
+   LOGGING( "TCPIP: Client connected." );
    clientPcb = newpcb;
 
    //!< Set the receive callback for the new PCB
@@ -299,10 +299,10 @@ static err_t echoRecvCallback( void *arg, struct tcp_pcb *tpcb, struct pbuf *p, 
 {
    if ( err != ERR_OK )
    {
-      LOGGING( "Receive error: %d", err );
+      LOGGING( "TCPIP: Receive error: %d", err );
       if ( p != nullptr )
       {
-         pbuf_free( p );
+         goto EXIT;
       }
       return err;
    }
@@ -311,17 +311,17 @@ static err_t echoRecvCallback( void *arg, struct tcp_pcb *tpcb, struct pbuf *p, 
    if ( p == nullptr )
    {
       tcp_close( tpcb );
-      LOGGING( "Client disconnected." );
+      LOGGING( "TCPIP: Client disconnected." );
       return ERR_OK;
    }
 
-   LOGGING( "Received data: len=%d, %s\n", p->len, (char*)p->payload );
+   LOGGING( "TCPIP: Received data: len=%d", p->len );
 
    //!< Echo the received data back to the client
    tcp_write( tpcb, p->payload, p->len, 1 );
    tcp_output( tpcb );
 
+EXIT:   
    pbuf_free( p );
-
-   return ERR_OK;
+   return err;
 }
