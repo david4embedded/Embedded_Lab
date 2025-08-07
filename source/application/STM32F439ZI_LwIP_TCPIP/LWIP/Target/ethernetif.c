@@ -30,7 +30,6 @@
 #include <string.h>
 #include "cmsis_os.h"
 #include "lwip/tcpip.h"
-#include "debug.h"
 
 /* Within 'USER CODE' section, code will be kept by default at each generation */
 /* USER CODE BEGIN 0 */

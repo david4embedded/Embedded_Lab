@@ -167,8 +167,6 @@ ethernet_input(struct pbuf *p, struct netif *netif)
     }
   }
 
-  //LWIP_DEBUGF(ETHARP_DEBUG | LWIP_DBG_TRACE, ("ethernet_input: eth_type = %"X16_F"\n", lwip_htons(type)));
-
   switch (type) {
 #if LWIP_IPV4 && LWIP_ARP
     /* IP packet? */
