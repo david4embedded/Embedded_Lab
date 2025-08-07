@@ -13,7 +13,7 @@ def run_client():
          s.connect((HOST, PORT))
          print("Connected!")
          
-         message = "Hello, STM32 Echo Server!"
+         message = "Hello, Echo Server!"
          print(f"Sending: '{message}'")
          s.sendall(message.encode('utf-8'))
          
