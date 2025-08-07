@@ -384,6 +384,17 @@ static err_t low_level_output(struct netif *netif, struct pbuf *p)
   TxConfig.TxBuffer = Txbuffer;
   TxConfig.pData = p;
 
+   printf("Txbuffer: len=%lu, data=", p->tot_len);  
+   for (uint32_t j = 0; j < i; j++) 
+   {
+      uint8_t *data = (uint8_t *)Txbuffer[j].buffer;
+      for (uint32_t k = 0; k < Txbuffer[j].len; k++) 
+      {
+         printf("%02X ", data[k]);
+      }
+   }
+   printf("\r\n");
+
   pbuf_ref(p);
 
   //LOGGING( "low_level_output: Sending packet of size %d bytes.", p->tot_len );
