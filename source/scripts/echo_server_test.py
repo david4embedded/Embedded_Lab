@@ -7,18 +7,18 @@ PORT = 7
 
 def run_client():
    """Simple TCP echo client."""
-   with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as socket:
+   with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
       try:
          print(f"Connecting to {HOST}:{PORT}...")
-         socket.connect((HOST, PORT))
+         s.connect((HOST, PORT))
          print("Connected!")
          
          message = "Hello, STM32 Echo Server!"
          print(f"Sending: '{message}'")
-         socket.sendall(message.encode('utf-8'))
+         s.sendall(message.encode('utf-8'))
          
          # Receive data from the server
-         data = socket.recv(1024)
+         data = s.recv(1024)
          print(f"Received echo: '{data.decode('utf-8')}'")
          
       except ConnectionRefusedError:
