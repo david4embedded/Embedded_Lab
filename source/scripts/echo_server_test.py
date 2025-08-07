@@ -18,7 +18,8 @@ def run_client():
          s.sendall(message.encode('utf-8'))
          
          # Receive data from the server
-         data = s.recv(1024)
+         length = len(message.encode('utf-8'))
+         data = s.recv(length)
          print(f"Received echo: '{data.decode('utf-8')}'")
          
       except ConnectionRefusedError:
