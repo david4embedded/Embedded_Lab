@@ -16,17 +16,11 @@
 #include "lwip/tcp.h"
 
 /******************************************** Consts ***********************************************/
-//#define TCP_LOOPBACK_TEST
-#define TCP_ECHO_SERVER_TEST
-
-#if defined (TCP_LOOPBACK_TEST)
-#define LOOPBACK_TEST_PORT 1234
-#define TEST_MESSAGE "Hello, Loopback!"
-#endif
-
-#if defined (TCP_ECHO_SERVER_TEST)
+#define ECHO_SERVER_ADDR_0  192
+#define ECHO_SERVER_ADDR_1  168
+#define ECHO_SERVER_ADDR_2  1
+#define ECHO_SERVER_ADDR_3  3
 #define ECHO_SERVER_PORT    7
-#endif
 
 /**************************************** Static Variables *****************************************/
 UART_HandleTypeDef huart2;
@@ -38,34 +32,19 @@ const osThreadAttr_t defaultTask_attributes =
    .priority = (osPriority_t) osPriorityNormal,
 };
 
-#if defined (TCP_LOOPBACK_TEST)
-
-#endif
-
-#if defined (TCP_ECHO_SERVER_TEST)
 static struct tcp_pcb *echoServerPcb;
 static struct tcp_pcb *clientPcb;
-#endif
 
 /**************************************** Local Functions ******************************************/
-static void MX_GPIO_Init         ( );
-static void MX_USART2_UART_Init  ( );
-static void SystemClock_Config   ( );
-static void startDefaultTask     ( void *argument );
+static void    MX_GPIO_Init         ( );
+static void    MX_USART2_UART_Init  ( );
+static void    SystemClock_Config   ( );
+static void    startDefaultTask     ( void *argument );
 
-#if defined (TCP_ECHO_SERVER_TEST)
-static void  initTcpEchoServer   ( );
-static err_t echoAcceptCallback  ( void *arg, struct tcp_pcb *newpcb, err_t err );
-static err_t echoRecvCallback    ( void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err );
-#endif
+static void    initTcpEchoServer   ( );
+static err_t   echoAcceptCallback  ( void *arg, struct tcp_pcb *newpcb, err_t err );
+static err_t   echoRecvCallback    ( void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err );
 
-#if defined (TCP_LOOPBACK_TEST)
-static void  tcp_loopback_client_test  ( );
-static void  tcp_loopback_server_test  ( );
-static void  lwip_loopback_test_init   ( );
-static err_t client_connected_callback (void *arg, struct tcp_pcb *tpcb, err_t err);
-static err_t server_accept_callback    (void *arg, struct tcp_pcb *tpcb, err_t err);
-#endif
 
 /*************************************** Function Definitions **************************************/
 /**
@@ -104,13 +83,7 @@ static void startDefaultTask(void *argument)
 {
    MX_LWIP_Init();
 
-#if defined (TCP_ECHO_SERVER_TEST)
    initTcpEchoServer();
-#endif
-
-#if defined (TCP_LOOPBACK_TEST)
-   lwip_loopback_test_init();
-#endif
 
    for(;;)
    {    
@@ -262,13 +235,13 @@ void assert_failed(uint8_t *file, uint32_t line)
 }
 #endif /* USE_FULL_ASSERT */
 
-#if defined (TCP_ECHO_SERVER_TEST)
-
-// TCP 에코 서버 초기화 함수
+/**
+ * @brief Initializes the TCP Echo Server.
+ */
 static void initTcpEchoServer( )
 {
    ip_addr_t ip_addr;
-   IP4_ADDR(&ip_addr, 192, 168, 1, 3); // Nucleo의 IP 주소 설정 (환경에 맞게 변경)
+   IP4_ADDR( &ip_addr, ECHO_SERVER_ADDR_0, ECHO_SERVER_ADDR_1, ECHO_SERVER_ADDR_2, ECHO_SERVER_ADDR_3 );
 
    echoServerPcb = tcp_new();
    if ( echoServerPcb == nullptr ) 
@@ -281,7 +254,7 @@ static void initTcpEchoServer( )
    {
       echoServerPcb = tcp_listen( echoServerPcb );
       tcp_accept( echoServerPcb, echoAcceptCallback );
-      LOGGING( "TCP Echo Server is listening on port %d.", ECHO_SERVER_PORT );
+      LOGGING( "TCP Echo Server is listening on port %d...", ECHO_SERVER_PORT );
    }
    else
    {
@@ -291,7 +264,14 @@ static void initTcpEchoServer( )
    }
 }
 
-// 새로운 연결을 수락하는 콜백 함수
+/**
+ * @brief Callback function for accepting new TCP connections.
+ * 
+ * @param arg argument passed to the callback (not used)
+ * @param newpcb pointer to the new TCP PCB
+ * @param err error code (not used)
+ * @return err_t 
+ */
 static err_t echoAcceptCallback( void *arg, struct tcp_pcb *newpcb, err_t err )
 {
    (void)arg;
@@ -300,18 +280,26 @@ static err_t echoAcceptCallback( void *arg, struct tcp_pcb *newpcb, err_t err )
    LOGGING( "Client connected." );
    clientPcb = newpcb;
 
-   // 콜백 함수 설정
+   //!< Set the receive callback for the new PCB
    tcp_recv( newpcb, echoRecvCallback );
 
    return ERR_OK;
 }
 
-// 수신된 데이터를 에코하고 해제하는 콜백 함수
+/**
+ * @brief Callback function for receiving data on the TCP connection.
+ * 
+ * @param arg argument passed to the callback (not used)
+ * @param tpcb pointer to the TCP PCB
+ * @param p pointer to the received pbuf
+ * @param err error code (not used)
+ * @return err_t 
+ */
 static err_t echoRecvCallback( void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err )
 {
-   // 데이터 수신 에러
    if ( err != ERR_OK )
    {
+      LOGGING( "Receive error: %d", err );
       if ( p != nullptr )
       {
          pbuf_free( p );
@@ -319,7 +307,7 @@ static err_t echoRecvCallback( void *arg, struct tcp_pcb *tpcb, struct pbuf *p, 
       return err;
    }
 
-   // 클라이언트 연결 해제
+   //!< Disconnect if p is null (client disconnected)
    if ( p == nullptr )
    {
       tcp_close( tpcb );
@@ -327,72 +315,13 @@ static err_t echoRecvCallback( void *arg, struct tcp_pcb *tpcb, struct pbuf *p, 
       return ERR_OK;
    }
 
-   // 데이터 수신
    LOGGING( "Received data: %s\n", (char*)p->payload );
 
-   // 데이터 에코
+   //!< Echo the received data back to the client
    tcp_write( tpcb, p->payload, p->len, 1 );
    tcp_output( tpcb );
 
    pbuf_free( p );
+
    return ERR_OK;
 }
-
-#endif /* TCP_ECHO_SERVER_TEST */
-
-#if defined (TCP_LOOPBACK_TEST)
-// main 함수나 Task에서 호출
-static void lwip_loopback_test_init(void)
-{
-   tcp_loopback_server_test(); // 서버 시작
-   HAL_Delay(100);             // 서버가 준비될 때까지 잠시 대기
-   tcp_loopback_client_test(); // 클라이언트 시작
-}
-
-// TCP 클라이언트 테스트 함수
-void tcp_loopback_client_test(void)
-{
-   struct tcp_pcb *tpcb;
-   ip_addr_t server_ip;
-
-   // 루프백 주소(127.0.0.1) 설정
-   IP4_ADDR(&server_ip, 127, 0, 0, 1);
-
-   tpcb = tcp_new();
-   if (tpcb != NULL)
-   {
-      // 서버에 연결
-      tcp_connect(tpcb, &server_ip, LOOPBACK_TEST_PORT, client_connected_callback);
-   }
-}
-
-// TCP 서버 테스트 함수
-static void tcp_loopback_server_test(void)
-{
-   struct tcp_pcb *tpcb;
-   ip_addr_t server_ip;
-
-   // 루프백 주소(127.0.0.1) 설정
-   IP4_ADDR(&server_ip, 127, 0, 0, 1);
-
-   tpcb = tcp_new();
-   if (tpcb != NULL)
-   {
-      tcp_bind(tpcb, &server_ip, LOOPBACK_TEST_PORT);
-      tpcb = tcp_listen(tpcb);
-      tcp_accept(tpcb, server_accept_callback);
-   }
-}
-
-static err_t client_connected_callback(void *arg, struct tcp_pcb *tpcb, err_t err)
-{
-   LOGGING( "Client connected to server." );
-   return ERR_OK;
-}
-
-static err_t server_accept_callback(void *arg, struct tcp_pcb *tpcb, err_t err)
-{
-   LOGGING( "Server accepted client connection." );
-   return ERR_OK;
-}
-#endif /* TCP_LOOPBACK_TEST */
