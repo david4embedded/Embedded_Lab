@@ -27,6 +27,9 @@
 * For serial logging, connect the UART cables to Nucleo's ports referring to this informatoin
    - UART2_RX: PA3
    - USART2_TX: PD5
+* Currently LEDs on the nucleo board are used:
+   - LD1 (Green): indicates the ethernet link status (Green when on)
+   - LD2 (Blue): toggled every 1sec while the default thread is running
 
 ## 5. Implementation Details
 * Note that some of the ethernet GPIO configurations are different from what's done by default on the CubeMX. To correct match the schematic for LAN872 the ethernet phy, these should be changed to:
