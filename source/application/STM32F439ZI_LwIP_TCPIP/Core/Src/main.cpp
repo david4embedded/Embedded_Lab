@@ -17,7 +17,7 @@
 
 /******************************************** Consts ***********************************************/
 //#define TCP_LOOPBACK_TEST
-//#define TCP_ECHO_SERVER_TEST
+#define TCP_ECHO_SERVER_TEST
 
 #if defined (TCP_LOOPBACK_TEST)
 #define LOOPBACK_TEST_PORT 1234
@@ -43,20 +43,20 @@ const osThreadAttr_t defaultTask_attributes =
 #endif
 
 #if defined (TCP_ECHO_SERVER_TEST)
-static struct tcp_pcb *echo_server_pcb;
-static struct tcp_pcb *client_pcb;
+static struct tcp_pcb *echoServerPcb;
+static struct tcp_pcb *clientPcb;
 #endif
 
 /**************************************** Local Functions ******************************************/
 static void MX_GPIO_Init         ( );
 static void MX_USART2_UART_Init  ( );
 static void SystemClock_Config   ( );
-static void StartDefaultTask     ( void *argument );
+static void startDefaultTask     ( void *argument );
 
 #if defined (TCP_ECHO_SERVER_TEST)
-static void  tcp_echo_server_init   ( );
-static err_t echo_accept_callback   ( void *arg, struct tcp_pcb *newpcb, err_t err );
-static err_t echo_recv_callback     ( void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err );
+static void  initTcpEchoServer   ( );
+static err_t echoAcceptCallback  ( void *arg, struct tcp_pcb *newpcb, err_t err );
+static err_t echoRecvCallback    ( void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err );
 #endif
 
 #if defined (TCP_LOOPBACK_TEST)
@@ -87,7 +87,7 @@ int main(void)
 
    osKernelInitialize();
 
-   defaultTaskHandle = osThreadNew( StartDefaultTask, NULL, &defaultTask_attributes );
+   defaultTaskHandle = osThreadNew( startDefaultTask, NULL, &defaultTask_attributes );
 
    osKernelStart();
 
@@ -100,12 +100,12 @@ int main(void)
  * @param  argument: Not used
  * @retval None
  */
-static void StartDefaultTask(void *argument)
+static void startDefaultTask(void *argument)
 {
    MX_LWIP_Init();
 
 #if defined (TCP_ECHO_SERVER_TEST)
-   tcp_echo_server_init();
+   initTcpEchoServer();
 #endif
 
 #if defined (TCP_LOOPBACK_TEST)
@@ -231,7 +231,7 @@ static void MX_GPIO_Init(void)
  */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-   if (htim->Instance == TIM6) 
+   if ( htim->Instance == TIM6 ) 
    {
       HAL_IncTick();
    }
@@ -265,64 +265,64 @@ void assert_failed(uint8_t *file, uint32_t line)
 #if defined (TCP_ECHO_SERVER_TEST)
 
 // TCP 에코 서버 초기화 함수
-static void tcp_echo_server_init(void)
+static void initTcpEchoServer( )
 {
    ip_addr_t ip_addr;
    IP4_ADDR(&ip_addr, 192, 168, 1, 3); // Nucleo의 IP 주소 설정 (환경에 맞게 변경)
 
-   echo_server_pcb = tcp_new();
-   if ( echo_server_pcb == NULL ) 
+   echoServerPcb = tcp_new();
+   if ( echoServerPcb == nullptr ) 
    {
       LOGGING( "Failed to create PCB." );
       return;
    }
 
-   if ( tcp_bind(echo_server_pcb, &ip_addr, ECHO_SERVER_PORT) == ERR_OK )
+   if ( tcp_bind( echoServerPcb, &ip_addr, ECHO_SERVER_PORT ) == ERR_OK )
    {
-      echo_server_pcb = tcp_listen(echo_server_pcb);
-      tcp_accept(echo_server_pcb, echo_accept_callback);
+      echoServerPcb = tcp_listen( echoServerPcb );
+      tcp_accept( echoServerPcb, echoAcceptCallback );
       LOGGING( "TCP Echo Server is listening on port %d.", ECHO_SERVER_PORT );
    }
    else
    {
       LOGGING( "Failed to bind PCB." );
-      tcp_abort(echo_server_pcb);
-      echo_server_pcb = NULL;
+      tcp_abort( echoServerPcb );
+      echoServerPcb = nullptr;
    }
 }
 
 // 새로운 연결을 수락하는 콜백 함수
-static err_t echo_accept_callback(void *arg, struct tcp_pcb *newpcb, err_t err)
+static err_t echoAcceptCallback( void *arg, struct tcp_pcb *newpcb, err_t err )
 {
    (void)arg;
    (void)err;
 
    LOGGING( "Client connected." );
-   client_pcb = newpcb;
+   clientPcb = newpcb;
 
    // 콜백 함수 설정
-   tcp_recv(newpcb, echo_recv_callback);
+   tcp_recv( newpcb, echoRecvCallback );
 
    return ERR_OK;
 }
 
 // 수신된 데이터를 에코하고 해제하는 콜백 함수
-static err_t echo_recv_callback(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err)
+static err_t echoRecvCallback( void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err )
 {
    // 데이터 수신 에러
-   if (err != ERR_OK)
+   if ( err != ERR_OK )
    {
-      if (p != NULL)
+      if ( p != nullptr )
       {
-         pbuf_free(p);
+         pbuf_free( p );
       }
       return err;
    }
 
    // 클라이언트 연결 해제
-   if (p == NULL)
+   if ( p == nullptr )
    {
-      tcp_close(tpcb);
+      tcp_close( tpcb );
       LOGGING( "Client disconnected." );
       return ERR_OK;
    }
@@ -331,10 +331,10 @@ static err_t echo_recv_callback(void *arg, struct tcp_pcb *tpcb, struct pbuf *p,
    LOGGING( "Received data: %s\n", (char*)p->payload );
 
    // 데이터 에코
-   tcp_write(tpcb, p->payload, p->len, 1);
-   tcp_output(tpcb);
+   tcp_write( tpcb, p->payload, p->len, 1 );
+   tcp_output( tpcb );
 
-   pbuf_free(p);
+   pbuf_free( p );
    return ERR_OK;
 }
 
@@ -386,11 +386,13 @@ static void tcp_loopback_server_test(void)
 
 static err_t client_connected_callback(void *arg, struct tcp_pcb *tpcb, err_t err)
 {
+   LOGGING( "Client connected to server." );
    return ERR_OK;
 }
 
 static err_t server_accept_callback(void *arg, struct tcp_pcb *tpcb, err_t err)
 {
+   LOGGING( "Server accepted client connection." );
    return ERR_OK;
 }
 #endif /* TCP_LOOPBACK_TEST */
