@@ -30,6 +30,7 @@
 #include <string.h>
 #include "cmsis_os.h"
 #include "lwip/tcpip.h"
+#include "debug.h"
 
 /* Within 'USER CODE' section, code will be kept by default at each generation */
 /* USER CODE BEGIN 0 */
@@ -380,21 +381,24 @@ static err_t low_level_output(struct netif *netif, struct pbuf *p)
   TxConfig.TxBuffer = Txbuffer;
   TxConfig.pData = p;
 
-   printf("Txbuffer: len=%lu, data=", p->tot_len);  
-   for (uint32_t j = 0; j < i; j++) 
-   {
-      uint8_t *data = (uint8_t *)Txbuffer[j].buffer;
-      for (uint32_t k = 0; k < Txbuffer[j].len; k++) 
-      {
-         printf("%02X ", data[k]);
-      }
-   }
-   printf("\r\n");
+  #if defined (DEBUG_ETHERNET_LOW_LEVEL)
+  printf("Txbuffer: len=%lu, data=", p->tot_len);  
+  for (uint32_t j = 0; j < i; j++) 
+  {
+     uint8_t *data = (uint8_t *)Txbuffer[j].buffer;
+     for (uint32_t k = 0; k < Txbuffer[j].len; k++) 
+     {
+        printf("%02X ", data[k]);
+     }
+  }
+  printf("\r\n");
+  #endif
 
   pbuf_ref(p);
 
-  //LOGGING( "low_level_output: Sending packet of size %d bytes.", p->tot_len );
+  #if defined (DEBUG_ETHERNET_LOW_LEVEL)
   printf( "tx\r\n" );
+  #endif
 
   if (HAL_ETH_Transmit_IT(&heth, &TxConfig) == HAL_OK) {
     while(osSemaphoreAcquire(TxPktSemaphore, TIME_WAITING_FOR_INPUT)!=osOK)
@@ -405,7 +409,6 @@ static err_t low_level_output(struct netif *netif, struct pbuf *p)
     HAL_ETH_ReleaseTxPacket(&heth);
   } else {
     pbuf_free(p);
-    printf( "tx Error\r\n" );
   }
 
   return errval;
