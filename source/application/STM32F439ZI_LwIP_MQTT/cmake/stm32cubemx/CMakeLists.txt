@@ -18,6 +18,7 @@ target_include_directories(stm32cubemx INTERFACE
     ../../Core/Inc
     ../../LWIP/App
     ../../LWIP/Target
+    ../../wolfMQTT
     ../../Middlewares/Third_Party/LwIP/src/include
     ../../Middlewares/Third_Party/LwIP/system
     ../../Drivers/STM32F4xx_HAL_Driver/Inc
@@ -41,6 +42,7 @@ target_include_directories(stm32cubemx INTERFACE
     ../../Middlewares/Third_Party/LwIP/src/include/compat/stdc
     ../../Middlewares/Third_Party/LwIP/system/arch
     ../../Drivers/CMSIS/Include
+    ../../Middlewares/Third_Party/wolfSSL_wolfMQTT_wolfMQTT/wolfmqtt/
 )
 
 target_sources(stm32cubemx INTERFACE
@@ -163,6 +165,21 @@ target_sources(stm32cubemx INTERFACE
     ../../Middlewares/Third_Party/LwIP/src/core/ipv6/nd6.c
     ../../Middlewares/Third_Party/LwIP/system/OS/sys_arch.c
     ../../Middlewares/Third_Party/LwIP/src/apps/mqtt/mqtt.c
+    ../../Middlewares/Third_Party/wolfSSL_wolfMQTT_wolfMQTT/wolfmqtt/src/mqtt_client.c
+    ../../Middlewares/Third_Party/wolfSSL_wolfMQTT_wolfMQTT/wolfmqtt/src/mqtt_packet.c
+    ../../Middlewares/Third_Party/wolfSSL_wolfMQTT_wolfMQTT/wolfmqtt/src/mqtt_socket.c
+    ../../Middlewares/Third_Party/wolfSSL_wolfMQTT_wolfMQTT/wolfmqtt/examples/mqttexample.c
+    ../../Middlewares/Third_Party/wolfSSL_wolfMQTT_wolfMQTT/wolfmqtt/examples/mqttnet.c
+    ../../Middlewares/Third_Party/wolfSSL_wolfMQTT_wolfMQTT/wolfmqtt/examples/mqttport.c
+    ../../Middlewares/Third_Party/wolfSSL_wolfMQTT_wolfMQTT/wolfmqtt/examples/mqttuart.c
+    ../../Middlewares/Third_Party/wolfSSL_wolfMQTT_wolfMQTT/wolfmqtt/examples/mqttclient/mqttclient.c
+    ../../Middlewares/Third_Party/wolfSSL_wolfMQTT_wolfMQTT/wolfmqtt/examples/mqttsimple/mqttsimple.c
+    ../../Middlewares/Third_Party/wolfSSL_wolfMQTT_wolfMQTT/wolfmqtt/examples/multithread/multithread.c
+    ../../Middlewares/Third_Party/wolfSSL_wolfMQTT_wolfMQTT/wolfmqtt/examples/aws/awsiot.c
+    ../../Middlewares/Third_Party/wolfSSL_wolfMQTT_wolfMQTT/wolfmqtt/examples/azure/azureiothub.c
+    ../../Middlewares/Third_Party/wolfSSL_wolfMQTT_wolfMQTT/wolfmqtt/examples/firmware/fwclient.c
+    ../../Middlewares/Third_Party/wolfSSL_wolfMQTT_wolfMQTT/wolfmqtt/examples/sn-client/sn-client.c
+    ../../Middlewares/Third_Party/wolfSSL_wolfMQTT_wolfMQTT/wolfmqtt/examples/wiot/wiot.c
     ../../Core/Src/sysmem.c
     ../../Core/Src/syscalls.c
     ../../startup_stm32f439xx.s
