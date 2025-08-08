@@ -19,7 +19,7 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 # Set the project name
-set(CMAKE_PROJECT_NAME STM32F439ZI_LwIP_TCPIP)
+set(CMAKE_PROJECT_NAME STM32F439ZI_LwIP_MQTT)
 
 # Include toolchain file
 include("cmake/gcc-arm-none-eabi.cmake")
