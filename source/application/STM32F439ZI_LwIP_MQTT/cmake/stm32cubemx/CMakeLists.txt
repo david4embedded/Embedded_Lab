@@ -40,6 +40,8 @@ target_include_directories(stm32cubemx INTERFACE
     ../../Middlewares/Third_Party/LwIP/src/include/compat/posix/sys
     ../../Middlewares/Third_Party/LwIP/src/include/compat/stdc
     ../../Middlewares/Third_Party/LwIP/system/arch
+    ../../Middlewares/Third_Party/paho.mqtt/
+    ../../Middlewares/Third_Party/paho.mqtt/MQTTPacket
     ../../Drivers/CMSIS/Include
 )
 
@@ -163,6 +165,18 @@ target_sources(stm32cubemx INTERFACE
     ../../Middlewares/Third_Party/LwIP/src/core/ipv6/nd6.c
     ../../Middlewares/Third_Party/LwIP/system/OS/sys_arch.c
     ../../Middlewares/Third_Party/LwIP/src/apps/mqtt/mqtt.c
+    ../../Middlewares/Third_Party/paho.mqtt/MQTTInterface.c
+    ../../Middlewares/Third_Party/paho.mqtt/MQTTClient.c
+    ../../Middlewares/Third_Party/paho.mqtt/MQTTPacket/MQTTConnectClient.c
+    ../../Middlewares/Third_Party/paho.mqtt/MQTTPacket/MQTTConnectServer.c
+    ../../Middlewares/Third_Party/paho.mqtt/MQTTPacket/MQTTDeserializePublish.c
+    ../../Middlewares/Third_Party/paho.mqtt/MQTTPacket/MQTTFormat.c
+    ../../Middlewares/Third_Party/paho.mqtt/MQTTPacket/MQTTPacket.c
+    ../../Middlewares/Third_Party/paho.mqtt/MQTTPacket/MQTTSerializePublish.c
+    ../../Middlewares/Third_Party/paho.mqtt/MQTTPacket/MQTTSubscribeClient.c
+    ../../Middlewares/Third_Party/paho.mqtt/MQTTPacket/MQTTSubscribeServer.c
+    ../../Middlewares/Third_Party/paho.mqtt/MQTTPacket/MQTTUnsubscribeClient.c
+    ../../Middlewares/Third_Party/paho.mqtt/MQTTPacket/MQTTUnsubscribeServer.c
     ../../Core/Src/sysmem.c
     ../../Core/Src/syscalls.c
     ../../startup_stm32f439xx.s
