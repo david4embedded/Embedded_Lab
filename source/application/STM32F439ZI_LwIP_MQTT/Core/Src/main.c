@@ -50,18 +50,12 @@ extern uint32_t MilliTimer;
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
-void MX_FREERTOS_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-int __io_putchar (int ch)
-{
-  HAL_UART_Transmit(&huart3, (const uint8_t*)&ch, 1, 10);
-  return ch;
-}
 
 /* USER CODE END 0 */
 
