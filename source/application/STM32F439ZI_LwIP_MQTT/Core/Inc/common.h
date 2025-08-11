@@ -12,3 +12,5 @@
 #else 
 #define LOGGING( format, ... )
 #endif
+
+#define PARAM_NOT_USED(x) (void)(x)
