@@ -5,8 +5,11 @@
  *      Author: https://github.com/eziya
  */
 
-#ifndef __MQTT_INTERFACE_H_
-#define __MQTT_INTERFACE_H_
+#pragma once
+
+#if defined __cplusplus
+extern "C" {
+#endif
 
 #define MQTT_LWIP_SOCKET	//Use SOCKET API
 //#define MQTT_LWIP_NETCONN //Use NETCONN API
@@ -46,4 +49,7 @@ void net_disconnect(Network*);
 void NewNetwork(Network*);
 int  ConnectNetwork(Network*, char*, int);
 
+
+#if defined __cplusplus
+}
 #endif

@@ -6,12 +6,6 @@
 #include "lwip/api.h"
 #include "lwip/sockets.h"
 
-#define MQTT_PORT	1883
-#define SERVER_IP1	192
-#define SERVER_IP2	168
-#define SERVER_IP3	1
-#define SERVER_IP4	227
-
 uint32_t MilliTimer;
 
 //Timer functions
@@ -48,6 +42,8 @@ void NewNetwork(Network *n) {
 int ConnectNetwork(Network *n, char *ip, int port) {
 	struct sockaddr_in server_addr;
 
+   printf( "ip address %s\r\n", ip );
+
 	if(n->socket)
 	{
 		close(n->socket);
@@ -70,6 +66,8 @@ int ConnectNetwork(Network *n, char *ip, int port) {
 		close(n->socket);
 		return -1;
 	}
+
+   printf( "ConnectNetwork ... done\r\n" );
 	return 0;
 }
 
