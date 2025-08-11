@@ -22,6 +22,7 @@
 #include "task.h"
 #include "main.h"
 #include "cmsis_os.h"
+#include "common.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -70,10 +71,10 @@ osThreadId defaultTaskHandle;
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
-void mqttClientSubTask(void const *argument); //mqtt client subscribe task function
-void mqttClientPubTask(void const *argument); //mqtt client publish task function
-int  mqttConnectBroker(void); 				//mqtt broker connect function
-void mqttMessageArrived(MessageData* msg); //mqtt message callback function
+void  mqttClientSubTask           ( void const *argument );
+void  mqttClientPubTask           ( void const *argument );
+int   mqttConnectBroker           ( );
+void  mqttCallbackMessageArrived  ( MessageData* msg );
 
 /* USER CODE END FunctionPrototypes */
 
@@ -89,26 +90,12 @@ extern "C" void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuff
 extern "C" void vApplicationStackOverflowHook(xTaskHandle xTask, signed char *pcTaskName);
 
 /* USER CODE BEGIN 4 */
-extern "C" void vApplicationStackOverflowHook(xTaskHandle xTask, signed char *pcTaskName)
-{
-  /* Run time stack overflow checking is performed if
-   configCHECK_FOR_STACK_OVERFLOW is defined to 1 or 2. This hook function is
-   called if a stack overflow is detected. */
-  HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, GPIO_PIN_SET); //turn on red led when detects stack overflow
-}
 /* USER CODE END 4 */
 
 /* USER CODE BEGIN GET_IDLE_TASK_MEMORY */
 static StaticTask_t xIdleTaskTCBBuffer;
 static StackType_t xIdleStack[configMINIMAL_STACK_SIZE];
 
-void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer, StackType_t **ppxIdleTaskStackBuffer, uint32_t *pulIdleTaskStackSize )
-{
-  *ppxIdleTaskTCBBuffer = &xIdleTaskTCBBuffer;
-  *ppxIdleTaskStackBuffer = &xIdleStack[0];
-  *pulIdleTaskStackSize = configMINIMAL_STACK_SIZE;
-  /* place for user code */
-}
 /* USER CODE END GET_IDLE_TASK_MEMORY */
 
 /**
@@ -179,38 +166,35 @@ void startDefaultTask(void const * argument)
 /* USER CODE BEGIN Application */
 void mqttClientSubTask( void const *argument )
 {
-   printf( "start MQTT Subscribe Task\r\n");
+   LOGGING( "start MQTT Subscribe Task" );
 
-   while(1)
+   for(;;)
    {
-      //waiting for valid ip address
-      if (gnetif.ip_addr.addr == 0 || gnetif.netmask.addr == 0 )//|| gnetif.gw.addr == 0)
+      if ( gnetif.ip_addr.addr == 0 || gnetif.netmask.addr == 0 )//|| gnetif.gw.addr == 0)
       {
          osDelay(1000);
          continue;
       }
       else
       {
-         printf("DHCP/Static IP O.K.\r\n");
          break;
       }
    }
 
-   printf( "Run MQTT Subscribe Task\r\n");
+   LOGGING( "Run MQTT Subscribe Task" );
 
-   while(1)
+   for(;;)
    {
       if(!mqttClient.isconnected)
       {
-         //try to connect to the broker
          MQTTDisconnect(&mqttClient);
          mqttConnectBroker();
          osDelay(1000);
       }
       else
       {
-         MQTTYield(&mqttClient, 1000); //handle timer
-         osDelay(100);
+         MQTTYield( &mqttClient, 1000 );
+         osDelay( 100 );
       }
    }
 }
@@ -218,30 +202,29 @@ void mqttClientSubTask( void const *argument )
 void mqttClientPubTask( void const *argument )
 {
    int count = 0;
-   uint8_t buff[64];
-
+   uint8_t buff[64] = {};
    MQTTMessage message;
 
-   printf( "start MQTT Publish Task\r\n");
+   LOGGING( "start MQTT Publish Task");
 
-   while(1)
+   for(;;)
    {
       if( mqttClient.isconnected )
       {
-         memset(buff, 0, sizeof(buff));
-         snprintf((char*)buff, sizeof(buff), "%d", count++);
-         message.payload = (void*)buff;
+         memset( buff, 0, sizeof(buff) );
+         snprintf( (char*)buff, sizeof(buff), "%d", count++);
+         message.payload = reinterpret_cast<void*>( buff );
          message.payloadlen = strlen((char*)buff);
 
-         if(MQTTPublish( &mqttClient, "test", &message ) != MQTT_SUCCESS)
+         if( MQTTPublish( &mqttClient, "test", &message ) != MQTT_SUCCESS )
          {
-            printf( "MQTTPublish failed.\r\n" );
+            LOGGING( "MQTTPublish failed." );
             MQTTCloseSession( &mqttClient );
             net_disconnect( &net );
          }
       }
 
-   osDelay( 1000 );
+      osDelay( 500 );
    }
 }
 
@@ -249,18 +232,18 @@ int mqttConnectBroker()
 {
    int ret;
 
-   printf( "start MQTT Connect Broker\r\n" );
+   LOGGING( "start MQTT Connect Broker" );
 
    NewNetwork(&net);
    ret = ConnectNetwork( &net, BROKER_IP, MQTT_PORT );
    if(ret != MQTT_SUCCESS)
    {
-      printf( "ConnectNetwork failed.\n" );
+      LOGGING( "ConnectNetwork failed." );
       net_disconnect( &net );
       return -1;
    }
 
-   printf( "MQTTPacket_connectData O.K\r\n" );
+   LOGGING( "MQTTPacket_connectData O.K" );
 
    MQTTClientInit( &mqttClient, &net, 1000, sndBuffer, sizeof(sndBuffer), rcvBuffer, sizeof(rcvBuffer) );
 
@@ -276,26 +259,26 @@ int mqttConnectBroker()
    ret = MQTTConnect( &mqttClient, &data );
    if(ret != MQTT_SUCCESS)
    {
-      printf( "MQTTConnect failed.\n" );
+      LOGGING( "MQTTConnect failed." );
       MQTTCloseSession( &mqttClient );
       net_disconnect( &net );
       return ret;
    }
 
-   ret = MQTTSubscribe( &mqttClient, "test", QOS0, mqttMessageArrived);
+   ret = MQTTSubscribe( &mqttClient, "test", QOS0, mqttCallbackMessageArrived );
    if(ret != MQTT_SUCCESS)
    {
-      printf("MQTTSubscribe failed.\n");
+      LOGGING( "MQTTSubscribe failed." );
       MQTTCloseSession( &mqttClient );
       net_disconnect( &net );
       return ret;
    }
 
-   printf( "MQTT_ConnectBroker O.K.\r\n" );
+   LOGGING( "MQTT_ConnectBroker O.K." );
    return MQTT_SUCCESS;
 }
 
-void mqttMessageArrived(MessageData* msg)
+void mqttCallbackMessageArrived(MessageData* msg)
 {
   HAL_GPIO_TogglePin( LD2_GPIO_Port, LD2_Pin );
 
@@ -303,7 +286,19 @@ void mqttMessageArrived(MessageData* msg)
   memset( msgBuffer, 0, sizeof( msgBuffer ) );
   memcpy( msgBuffer, message->payload,message->payloadlen );
 
-  printf( "MQTT MSG[%d]:%s\r\n", (int)message->payloadlen, msgBuffer );
+  LOGGING( "MQTT MSG[%d]:%s", (int)message->payloadlen, msgBuffer );
+}
+
+void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer, StackType_t **ppxIdleTaskStackBuffer, uint32_t *pulIdleTaskStackSize )
+{
+  *ppxIdleTaskTCBBuffer = &xIdleTaskTCBBuffer;
+  *ppxIdleTaskStackBuffer = &xIdleStack[0];
+  *pulIdleTaskStackSize = configMINIMAL_STACK_SIZE;
+}
+
+void vApplicationStackOverflowHook(xTaskHandle xTask, signed char *pcTaskName)
+{
+  HAL_GPIO_WritePin( LD3_GPIO_Port, LD3_Pin, GPIO_PIN_SET );
 }
 
 /* USER CODE END Application */

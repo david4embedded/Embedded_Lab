@@ -77,7 +77,6 @@ void MQTTClientInit(MQTTClient* c, Network* network, unsigned int command_timeou
 	  MutexInit(&c->mutex);
 #endif
 
-   printf( "MQTTClientInit ... done\r\n" );
 }
 
 
@@ -462,7 +461,6 @@ exit:
 	  MutexUnlock(&c->mutex);
 #endif
 
-    printf( "MQTTConnectWithResults ... done\r\n" );
     return rc;
 }
 

@@ -25,7 +25,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "common.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -89,8 +89,9 @@ int main(void)
    /* Initialize all configured peripherals */
    MX_GPIO_Init();
    MX_USART3_UART_Init();
+   
    /* USER CODE BEGIN 2 */
-
+   LOGGING( "Welcome to the STM32 MQTT Client!" );
    /* USER CODE END 2 */
 
    /* Call init function for freertos objects (in cmsis_os2.c) */
