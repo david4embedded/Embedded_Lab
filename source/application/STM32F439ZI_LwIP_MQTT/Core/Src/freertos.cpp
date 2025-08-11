@@ -41,9 +41,9 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define BROKER_IP		   "192.168.1.2"
-#define MQTT_PORT		   1883
-#define MQTT_BUFSIZE	   1024
+constexpr const char* BROKER_IP = "192.168.1.2";
+constexpr uint16_t MQTT_PORT = 1883;
+constexpr size_t MQTT_BUFSIZE = 1024;
 
 /* USER CODE END PD */
 
@@ -143,11 +143,13 @@ void startDefaultTask(void const * argument)
    MX_LWIP_Init();
 
    /* USER CODE BEGIN startDefaultTask */
+   PARAM_NOT_USED( argument );
+
    osThreadDef( mqttClientSubTask, mqttClientSubTask, osPriorityNormal, 0, configMINIMAL_STACK_SIZE );
    osThreadDef( mqttClientPubTask, mqttClientPubTask, osPriorityNormal, 0, configMINIMAL_STACK_SIZE );
 
    mqttClientSubTaskHandle = osThreadCreate(osThread(mqttClientSubTask), NULL);
-   osDelay(1000);
+   osDelay( 1000 );
    mqttClientPubTaskHandle = osThreadCreate(osThread(mqttClientPubTask), NULL);
 
    /* Infinite loop */
@@ -162,6 +164,7 @@ void startDefaultTask(void const * argument)
 /* USER CODE BEGIN Application */
 void mqttClientSubTask( void const *argument )
 {
+   PARAM_NOT_USED( argument );
    LOGGING( "start MQTT Subscribe Task" );
 
    for(;;)
@@ -197,6 +200,8 @@ void mqttClientSubTask( void const *argument )
 
 void mqttClientPubTask( void const *argument )
 {
+   PARAM_NOT_USED( argument );
+
    int count = 0;
    uint8_t buff[64] = {};
    MQTTMessage message;
@@ -226,12 +231,10 @@ void mqttClientPubTask( void const *argument )
 
 int mqttConnectBroker( )
 {
-   int ret;
-
    LOGGING( "start MQTT Connect Broker" );
 
    NewNetwork( &net );
-   ret = ConnectNetwork( &net, BROKER_IP, MQTT_PORT );
+   auto ret = ConnectNetwork( &net, const_cast<char*>( BROKER_IP ), MQTT_PORT );
    if( ret != MQTT_SUCCESS )
    {
       LOGGING( "ConnectNetwork failed." );
@@ -278,7 +281,7 @@ void mqttCallbackMessageArrived( MessageData* msg )
 {
   HAL_GPIO_TogglePin( LD2_GPIO_Port, LD2_Pin );
 
-  MQTTMessage* message = msg->message;
+  const auto* message = msg->message;
 
   uint8_t msgBuffer[MQTT_BUFSIZE];
   memset( msgBuffer, 0, sizeof( msgBuffer ) );
@@ -296,7 +299,10 @@ void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer, StackTy
 
 void vApplicationStackOverflowHook(xTaskHandle xTask, signed char *pcTaskName)
 {
-  HAL_GPIO_WritePin( LD3_GPIO_Port, LD3_Pin, GPIO_PIN_SET );
+   PARAM_NOT_USED( xTask );
+   PARAM_NOT_USED( pcTaskName );
+
+   HAL_GPIO_WritePin( LD3_GPIO_Port, LD3_Pin, GPIO_PIN_SET );
 }
 
 /* USER CODE END Application */
