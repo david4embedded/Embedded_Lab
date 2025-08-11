@@ -41,9 +41,9 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define BROKER_IP		"192.168.1.2"
-#define MQTT_PORT		1883
-#define MQTT_BUFSIZE	1024
+#define BROKER_IP		   "192.168.1.2"
+#define MQTT_PORT		   1883
+#define MQTT_BUFSIZE	   1024
 
 /* USER CODE END PD */
 
@@ -54,17 +54,15 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
-extern struct netif gnetif; //extern gnetif
+extern struct netif gnetif;
 
-osThreadId mqttClientSubTaskHandle;  //mqtt client task handle
-osThreadId mqttClientPubTaskHandle;  //mqtt client task handle
+osThreadId  mqttClientSubTaskHandle; 
+osThreadId  mqttClientPubTaskHandle; 
+Network     net; 
+MQTTClient  mqttClient; 
 
-Network net; //mqtt network
-MQTTClient mqttClient; //mqtt client
-
-uint8_t sndBuffer[MQTT_BUFSIZE]; //mqtt send buffer
-uint8_t rcvBuffer[MQTT_BUFSIZE]; //mqtt receive buffer
-uint8_t msgBuffer[MQTT_BUFSIZE]; //mqtt message buffer
+uint8_t     mqttSendBuffer[MQTT_BUFSIZE]; 
+uint8_t     mqttRecvBuffer[MQTT_BUFSIZE];  
 
 /* USER CODE END Variables */
 osThreadId defaultTaskHandle;
@@ -79,9 +77,6 @@ void  mqttCallbackMessageArrived  ( MessageData* msg );
 /* USER CODE END FunctionPrototypes */
 
 void startDefaultTask(void const * argument);
-
-extern void MX_LWIP_Init(void);
-void MX_FREERTOS_Init(void);
 
 /* GetIdleTaskMemory prototype (linked to static allocation support) */
 extern "C" void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer, StackType_t **ppxIdleTaskStackBuffer, uint32_t *pulIdleTaskStackSize );
@@ -103,7 +98,8 @@ static StackType_t xIdleStack[configMINIMAL_STACK_SIZE];
   * @param  None
   * @retval None
   */
-void MX_FREERTOS_Init(void) {
+void MX_FREERTOS_Init(void) 
+{
    /* USER CODE BEGIN Init */
 
    /* USER CODE END Init */
@@ -185,9 +181,9 @@ void mqttClientSubTask( void const *argument )
 
    for(;;)
    {
-      if(!mqttClient.isconnected)
+      if( !mqttClient.isconnected )
       {
-         MQTTDisconnect(&mqttClient);
+         MQTTDisconnect( &mqttClient );
          mqttConnectBroker();
          osDelay(1000);
       }
@@ -228,15 +224,15 @@ void mqttClientPubTask( void const *argument )
    }
 }
 
-int mqttConnectBroker()
+int mqttConnectBroker( )
 {
    int ret;
 
    LOGGING( "start MQTT Connect Broker" );
 
-   NewNetwork(&net);
+   NewNetwork( &net );
    ret = ConnectNetwork( &net, BROKER_IP, MQTT_PORT );
-   if(ret != MQTT_SUCCESS)
+   if( ret != MQTT_SUCCESS )
    {
       LOGGING( "ConnectNetwork failed." );
       net_disconnect( &net );
@@ -245,7 +241,7 @@ int mqttConnectBroker()
 
    LOGGING( "MQTTPacket_connectData O.K" );
 
-   MQTTClientInit( &mqttClient, &net, 1000, sndBuffer, sizeof(sndBuffer), rcvBuffer, sizeof(rcvBuffer) );
+   MQTTClientInit( &mqttClient, &net, 1000, mqttSendBuffer, sizeof(mqttSendBuffer), mqttRecvBuffer, sizeof(mqttRecvBuffer) );
 
    MQTTPacket_connectData data = MQTTPacket_connectData_initializer;
    data.willFlag = 0;
@@ -278,11 +274,13 @@ int mqttConnectBroker()
    return MQTT_SUCCESS;
 }
 
-void mqttCallbackMessageArrived(MessageData* msg)
+void mqttCallbackMessageArrived( MessageData* msg )
 {
   HAL_GPIO_TogglePin( LD2_GPIO_Port, LD2_Pin );
 
   MQTTMessage* message = msg->message;
+
+  uint8_t msgBuffer[MQTT_BUFSIZE];
   memset( msgBuffer, 0, sizeof( msgBuffer ) );
   memcpy( msgBuffer, message->payload,message->payloadlen );
 

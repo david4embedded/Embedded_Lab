@@ -42,8 +42,6 @@ void NewNetwork(Network *n) {
 int ConnectNetwork(Network *n, char *ip, int port) {
 	struct sockaddr_in server_addr;
 
-   printf( "ip address %s\r\n", ip );
-
 	if(n->socket)
 	{
 		close(n->socket);
@@ -67,7 +65,6 @@ int ConnectNetwork(Network *n, char *ip, int port) {
 		return -1;
 	}
 
-   printf( "ConnectNetwork ... done\r\n" );
 	return 0;
 }
 
