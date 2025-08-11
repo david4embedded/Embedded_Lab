@@ -41,10 +41,9 @@
 
 #include "cmsis_os.h"
 
-/* NOTE: This should be commented out since there's the same variable somewhere else. */
-// #if defined(LWIP_PROVIDE_ERRNO)
-// int errno;
-// #endif
+#if defined(LWIP_PROVIDE_ERRNO)
+int errno;
+#endif
 
 /*-----------------------------------------------------------------------------------*/
 //  Creates an empty mailbox.

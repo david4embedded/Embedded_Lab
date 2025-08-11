@@ -9,42 +9,45 @@
 
 /****************************************** Includes ***********************************************/
 #include "main.h"
+#include "usart.h"
 #include "common.h"
 #include "stm32f4xx_nucleo_144.h"
 #include "cmsis_os.h"
 #include "lwip.h"
 #include "lwip/tcp.h"
+#include "MQTTClient.h"
+#include "MQTTInterface.h"
+#include <string.h>
 
 /******************************************** Consts ***********************************************/
-#define ECHO_SERVER_ADDR_0  192
-#define ECHO_SERVER_ADDR_1  168
-#define ECHO_SERVER_ADDR_2  1
-#define ECHO_SERVER_ADDR_3  3
-#define ECHO_SERVER_PORT    7
+#define  BROKER_IP     "192.168.1.2"
+#define  MQTT_PORT	  1883
+#define  MQTT_BUFSIZE  1024
+
+/**************************************** Global Variables *****************************************/
+extern struct netif gnetif;
+extern uint32_t MilliTimer;
 
 /**************************************** Static Variables *****************************************/
-UART_HandleTypeDef huart3;
-osThreadId_t defaultTaskHandle;
-const osThreadAttr_t defaultTask_attributes = 
-{
-   .name = "defaultTask",
-   .stack_size = 1024 * 4,
-   .priority = (osPriority_t) osPriorityNormal,
-};
+osThreadId  defaultTaskHandle;
+osThreadId  mqttClientSubTaskHandle;
+osThreadId  mqttClientPubTaskHandle;
+Network     net;
+MQTTClient  mqttClient;
 
-static struct tcp_pcb *echoServerPcb;
-static struct tcp_pcb *clientPcb;
+uint8_t sndBuffer[MQTT_BUFSIZE]; 
+uint8_t rcvBuffer[MQTT_BUFSIZE]; 
+uint8_t msgBuffer[MQTT_BUFSIZE];
 
 /**************************************** Local Functions ******************************************/
 static void    MX_GPIO_Init         ( );
-static void    MX_USART3_UART_Init  ( );
 static void    SystemClock_Config   ( );
-static void    startDefaultTask     ( void *argument );
+static void    startDefaultTask     ( const void *argument );
 
-static void    initTcpEchoServer    ( );
-static err_t   echoAcceptCallback   ( void *arg, struct tcp_pcb *newpcb, err_t err );
-static err_t   echoRecvCallback     ( void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err );
-
+static void    mqttClientSubTask    ( const void *argument );    
+static void    mqttClientPubTask    ( const void *argument ); 
+static int     mqttConnectBroker    ( ); 				  
+static void    mqttMessageArrived   ( MessageData* msg ); 
 
 /*************************************** Function Definitions **************************************/
 /**
@@ -64,9 +67,8 @@ int main(void)
 
    LOGGING( "Welcome to STM32F439ZI LwIP TCP/IP Application" );
 
-   osKernelInitialize();
-
-   defaultTaskHandle = osThreadNew( startDefaultTask, NULL, &defaultTask_attributes );
+   osThreadDef( defaultTask, startDefaultTask, osPriorityNormal, 0, 1024 );
+   defaultTaskHandle = osThreadCreate(osThread(defaultTask), nullptr );
 
    osKernelStart();
 
@@ -79,16 +81,21 @@ int main(void)
  * @param  argument: Not used
  * @retval None
  */
-static void startDefaultTask(void *argument)
+static void startDefaultTask( const void *argument )
 {
    MX_LWIP_Init();
 
-   initTcpEchoServer();
+   // osDelay(1000);      
+   // osThreadDef( mqttClientSub, mqttClientSubTask, osPriorityNormal, 0, 2048 );
+   // mqttClientSubTaskHandle = osThreadCreate( osThread( mqttClientSub ), nullptr );
+
+   // osDelay(1000);      
+   // osThreadDef( mqttClientPub, mqttClientPubTask, osPriorityNormal, 0, 2048 );
+   // mqttClientPubTaskHandle = osThreadCreate( osThread( mqttClientPub ), nullptr );
 
    for(;;)
    {    
       osDelay(1000);
-      LOGGING( "Default Task" );
       BSP_LED_Toggle( LED_BLUE );
    }
 }
@@ -147,39 +154,6 @@ static void SystemClock_Config(void)
 }
 
 /**
- * @brief USART2 Initialization Function
- * @param None
- * @retval None
- */
-static void MX_USART3_UART_Init(void)
-{
-   huart3.Instance = USART3;
-   huart3.Init.BaudRate = 115200;
-   huart3.Init.WordLength = UART_WORDLENGTH_8B;
-   huart3.Init.StopBits = UART_STOPBITS_1;
-   huart3.Init.Parity = UART_PARITY_NONE;
-   huart3.Init.Mode = UART_MODE_TX_RX;
-   huart3.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-   huart3.Init.OverSampling = UART_OVERSAMPLING_16;
-   if (HAL_UART_Init(&huart3) != HAL_OK)
-   {
-      Error_Handler();
-   }
-}
-
-/**
- * @brief Redirects the C library printf function to the USART2.
- * @param file: File descriptor (not used)
- * @param ptr: Pointer to the data to be sent
- * @param len: Length of the data to be sent
- * @retval Number of bytes written
- */
-extern "C" int _write(int file, char *ptr, int len)
-{
-   HAL_UART_Transmit( &huart3, (uint8_t*)ptr, len, HAL_MAX_DELAY );
-}
-
-/**
  * @brief GPIO Initialization Function
  * @param None
  * @retval None
@@ -208,6 +182,154 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
    {
       HAL_IncTick();
    }
+
+   if (htim->Instance == TIM6) 
+   {
+      MilliTimer++;
+   }
+}
+
+static void mqttClientSubTask( const void *argument )
+{
+   PARAM_NOT_USED( argument );
+
+   printf( "start MQTT Subscribe Task\r\n");
+
+  while(1)
+  {
+    //waiting for valid ip address
+    if (gnetif.ip_addr.addr == 0 || gnetif.netmask.addr == 0 )//|| gnetif.gw.addr == 0) //system has no valid ip address
+    {
+      osDelay(1000);
+      continue;
+    }
+    else
+    {
+      break;
+    }
+  }
+
+  bool connectedOnce = false;
+
+  while(1)
+  {
+    if( !mqttClient.isconnected && !connectedOnce )
+    {
+      //try to connect to the broker
+      MQTTDisconnect(&mqttClient);
+      auto result = mqttConnectBroker();
+      if ( result == MQTT_SUCCESS )
+      {
+         connectedOnce = true;
+         printf( "mqtt connected once!\r\n" );
+      }
+      else
+      {
+         printf("mqttConnectBroker failed...abort\r\n");
+         abort();
+      }
+      osDelay(1000);
+    }
+    else
+    {
+      MQTTYield(&mqttClient, 1000); //handle timer
+      osDelay(100);
+    }
+
+    //printf( "Run MQTT Subscribe Task\r\n");
+  }
+}
+
+static void mqttClientPubTask( const void *argument )
+{
+   PARAM_NOT_USED( argument );
+
+  int count = 0;
+  uint8_t buff[64];
+
+  MQTTMessage message;
+
+  printf( "start MQTT Publish Task\r\n");
+
+  while(1)
+  {
+    if(mqttClient.isconnected)
+    {
+      memset(buff, 0, sizeof(buff));
+      snprintf((char*)buff, sizeof(buff), "%d", count++);
+      message.payload = (void*)buff;
+      message.payloadlen = strlen((char*)buff);
+
+      if(MQTTPublish(&mqttClient, "test", &message) != MQTT_SUCCESS)
+      {
+        printf( "MQTTPublish failed.\r\n" );
+        MQTTCloseSession(&mqttClient);
+        net_disconnect(&net);
+      }
+    }
+
+    osDelay(1000);
+    //printf( "Run MQTT Publish Task\r\n");
+  }
+}
+
+static int mqttConnectBroker()
+{
+  int ret;
+
+  printf( "start MQTT Connect Broker\r\n");
+
+  NewNetwork(&net);
+  ret = ConnectNetwork(&net, BROKER_IP, MQTT_PORT);
+  if(ret != MQTT_SUCCESS)
+  {
+    printf( "ConnectNetwork failed, ret=%d\r\n", ret );
+    net_disconnect(&net);
+    return -1;
+  }
+
+  MQTTClientInit(&mqttClient, &net, 1000, sndBuffer, sizeof(sndBuffer), rcvBuffer, sizeof(rcvBuffer));
+
+  MQTTPacket_connectData data = MQTTPacket_connectData_initializer;
+  data.willFlag = 0;
+  data.MQTTVersion = 3;
+  data.clientID.cstring = "STM32F4";
+  data.username.cstring = "STM32F4";
+  data.password.cstring = "";
+  data.keepAliveInterval = 60;
+  data.cleansession = 1;
+
+  ret = MQTTConnect(&mqttClient, &data);
+  if(ret != MQTT_SUCCESS)
+  {
+    printf("MQTTConnect failed.\r\n");
+    MQTTCloseSession(&mqttClient);
+    net_disconnect(&net);
+    return ret;
+  }
+
+  ret = MQTTSubscribe(&mqttClient, "test", QOS0, mqttMessageArrived);
+  if(ret != MQTT_SUCCESS)
+  {
+    printf("MQTTSubscribe failed.\r\n");
+    MQTTCloseSession(&mqttClient);
+    net_disconnect(&net);
+    return ret;
+  }
+
+  printf( "mqttConnectBroker... done\r\n " );
+  return MQTT_SUCCESS;
+}
+
+static void mqttMessageArrived(MessageData* msg)
+{
+  //HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin); //toggle pin when new message arrived
+
+  MQTTMessage* message = msg->message;
+  memset(msgBuffer, 0, sizeof(msgBuffer));
+  memcpy(msgBuffer, message->payload,message->payloadlen);
+
+  printf("MQTT MSG[%d]:%s\r\n", (int)message->payloadlen, msgBuffer);
 }
 
 /**
@@ -234,94 +356,3 @@ void assert_failed(uint8_t *file, uint32_t line)
 
 }
 #endif /* USE_FULL_ASSERT */
-
-/**
- * @brief Initializes the TCP Echo Server.
- */
-static void initTcpEchoServer( )
-{
-   ip_addr_t ipAddr;
-   IP4_ADDR( &ipAddr, ECHO_SERVER_ADDR_0, ECHO_SERVER_ADDR_1, ECHO_SERVER_ADDR_2, ECHO_SERVER_ADDR_3 );
-
-   echoServerPcb = tcp_new();
-   if ( echoServerPcb == nullptr ) 
-   {
-      LOGGING( "Failed to create PCB." );
-      return;
-   }
-
-   if ( tcp_bind( echoServerPcb, &ipAddr, ECHO_SERVER_PORT ) == ERR_OK )
-   {
-      echoServerPcb = tcp_listen( echoServerPcb );
-      tcp_accept( echoServerPcb, echoAcceptCallback );
-      LOGGING( "TCPIP: Echo Server is listening on port %d...", ECHO_SERVER_PORT );
-   }
-   else
-   {
-      LOGGING( "TCPIP: Failed to bind PCB." );
-      tcp_abort( echoServerPcb );
-      echoServerPcb = nullptr;
-   }
-}
-
-/**
- * @brief Callback function for accepting new TCP connections.
- * 
- * @param arg argument passed to the callback (not used)
- * @param newpcb pointer to the new TCP PCB
- * @param err error code (not used)
- * @return err_t 
- */
-static err_t echoAcceptCallback( void *arg, struct tcp_pcb *newpcb, err_t err )
-{
-   (void)arg;
-   (void)err;
-
-   LOGGING( "TCPIP: Client connected." );
-   clientPcb = newpcb;
-
-   //!< Set the receive callback for the new PCB
-   tcp_recv( newpcb, echoRecvCallback );
-
-   return ERR_OK;
-}
-
-/**
- * @brief Callback function for receiving data on the TCP connection.
- * 
- * @param arg argument passed to the callback (not used)
- * @param tpcb pointer to the TCP PCB
- * @param p pointer to the received pbuf
- * @param err error code (not used)
- * @return err_t 
- */
-static err_t echoRecvCallback( void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err )
-{
-   if ( err != ERR_OK )
-   {
-      LOGGING( "TCPIP: Receive error: %d", err );
-      if ( p != nullptr )
-      {
-         goto EXIT;
-      }
-      return err;
-   }
-
-   //!< Disconnect if p is null (client disconnected)
-   if ( p == nullptr )
-   {
-      tcp_close( tpcb );
-      LOGGING( "TCPIP: Client disconnected." );
-      return ERR_OK;
-   }
-
-   LOGGING( "TCPIP: Received data: len=%d", p->len );
-
-   //!< Echo the received data back to the client
-   tcp_write( tpcb, p->payload, p->len, 1 );
-   tcp_output( tpcb );
-
-EXIT:   
-   pbuf_free( p );
-   return err;
-}
