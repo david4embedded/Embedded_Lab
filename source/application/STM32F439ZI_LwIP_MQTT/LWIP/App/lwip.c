@@ -19,7 +19,6 @@
 /* USER CODE END Header */
 
 /* Includes ------------------------------------------------------------------*/
-#include "stm32f4xx_nucleo_144.h"
 #include "lwip.h"
 #include "lwip/init.h"
 #include "lwip/netif.h"
@@ -27,10 +26,10 @@
 #include "lwip/sio.h"
 #endif /* MDK ARM Compiler */
 #include "ethernetif.h"
-#include <string.h>
 
 /* USER CODE BEGIN 0 */
-
+#include "stm32f4xx_nucleo_144.h"
+#include <string.h>
 /* USER CODE END 0 */
 /* Private function prototypes -----------------------------------------------*/
 static void ethernet_link_status_updated(struct netif *netif);
