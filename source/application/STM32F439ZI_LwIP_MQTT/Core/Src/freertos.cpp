@@ -70,14 +70,14 @@ osThreadId defaultTaskHandle;
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
-void MqttClientSubTask(void const *argument); //mqtt client subscribe task function
-void MqttClientPubTask(void const *argument); //mqtt client publish task function
-int  MqttConnectBroker(void); 				//mqtt broker connect function
-void MqttMessageArrived(MessageData* msg); //mqtt message callback function
+void mqttClientSubTask(void const *argument); //mqtt client subscribe task function
+void mqttClientPubTask(void const *argument); //mqtt client publish task function
+int  mqttConnectBroker(void); 				//mqtt broker connect function
+void mqttMessageArrived(MessageData* msg); //mqtt message callback function
 
 /* USER CODE END FunctionPrototypes */
 
-void StartDefaultTask(void const * argument);
+void startDefaultTask(void const * argument);
 
 extern void MX_LWIP_Init(void);
 void MX_FREERTOS_Init(void);
@@ -117,35 +117,34 @@ void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer, StackTy
   * @retval None
   */
 void MX_FREERTOS_Init(void) {
-  /* USER CODE BEGIN Init */
+   /* USER CODE BEGIN Init */
 
-  /* USER CODE END Init */
+   /* USER CODE END Init */
 
-  /* USER CODE BEGIN RTOS_MUTEX */
-  /* add mutexes, ... */
-  /* USER CODE END RTOS_MUTEX */
+   /* USER CODE BEGIN RTOS_MUTEX */
+   /* add mutexes, ... */
+   /* USER CODE END RTOS_MUTEX */
 
-  /* USER CODE BEGIN RTOS_SEMAPHORES */
-  /* add semaphores, ... */
-  /* USER CODE END RTOS_SEMAPHORES */
+   /* USER CODE BEGIN RTOS_SEMAPHORES */
+   /* add semaphores, ... */
+   /* USER CODE END RTOS_SEMAPHORES */
 
-  /* USER CODE BEGIN RTOS_TIMERS */
-  /* start timers, add new ones, ... */
-  /* USER CODE END RTOS_TIMERS */
+   /* USER CODE BEGIN RTOS_TIMERS */
+   /* start timers, add new ones, ... */
+   /* USER CODE END RTOS_TIMERS */
 
-  /* USER CODE BEGIN RTOS_QUEUES */
-  /* add queues, ... */
-  /* USER CODE END RTOS_QUEUES */
+   /* USER CODE BEGIN RTOS_QUEUES */
+   /* add queues, ... */
+   /* USER CODE END RTOS_QUEUES */
 
-  /* Create the thread(s) */
-  /* definition and creation of defaultTask */
-  osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 512);
-  defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
+   /* Create the thread(s) */
+   /* definition and creation of defaultTask */
+   osThreadDef( defaultTask, startDefaultTask, osPriorityNormal, 0, 512 );
+   defaultTaskHandle = osThreadCreate( osThread( defaultTask ), NULL );
 
-  /* USER CODE BEGIN RTOS_THREADS */
-  /* add threads, ... */
-  /* USER CODE END RTOS_THREADS */
-
+   /* USER CODE BEGIN RTOS_THREADS */
+   /* add threads, ... */
+   /* USER CODE END RTOS_THREADS */
 }
 
 /* USER CODE BEGIN Header_StartDefaultTask */
@@ -155,159 +154,156 @@ void MX_FREERTOS_Init(void) {
  * @retval None
  */
 /* USER CODE END Header_StartDefaultTask */
-void StartDefaultTask(void const * argument)
+void startDefaultTask(void const * argument)
 {
-  /* init code for LWIP */
-  MX_LWIP_Init();
-  /* USER CODE BEGIN StartDefaultTask */
-  osThreadDef(mqttClientSubTask, MqttClientSubTask, osPriorityNormal, 0, configMINIMAL_STACK_SIZE); //subscribe task
-  osThreadDef(mqttClientPubTask, MqttClientPubTask, osPriorityNormal, 0, configMINIMAL_STACK_SIZE); //publish task
-  mqttClientSubTaskHandle = osThreadCreate(osThread(mqttClientSubTask), NULL);
+   /* init code for LWIP */
+   MX_LWIP_Init();
 
-  osDelay(1000);
+   /* USER CODE BEGIN startDefaultTask */
+   osThreadDef( mqttClientSubTask, mqttClientSubTask, osPriorityNormal, 0, configMINIMAL_STACK_SIZE );
+   osThreadDef( mqttClientPubTask, mqttClientPubTask, osPriorityNormal, 0, configMINIMAL_STACK_SIZE );
 
-  mqttClientPubTaskHandle = osThreadCreate(osThread(mqttClientPubTask), NULL);
+   mqttClientSubTaskHandle = osThreadCreate(osThread(mqttClientSubTask), NULL);
+   osDelay(1000);
+   mqttClientPubTaskHandle = osThreadCreate(osThread(mqttClientPubTask), NULL);
 
-  /* Infinite loop */
-  for(;;)
-  {
-    osDelay(1);
-  }
-  /* USER CODE END StartDefaultTask */
+   /* Infinite loop */
+   for(;;)
+   {
+      osDelay( 1000 );
+   }
+   /* USER CODE END startDefaultTask */
 }
 
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
-void MqttClientSubTask(void const *argument)
+void mqttClientSubTask( void const *argument )
 {
-  printf( "start MQTT Subscribe Task\r\n");
+   printf( "start MQTT Subscribe Task\r\n");
 
-  while(1)
-  {
-    //waiting for valid ip address
-    if (gnetif.ip_addr.addr == 0 || gnetif.netmask.addr == 0 )//|| gnetif.gw.addr == 0) //system has no valid ip address
-    {
-      osDelay(1000);
-      continue;
-    }
-    else
-    {
-      printf("DHCP/Static IP O.K.\r\n");
-      break;
-    }
-  }
-
-  printf( "Run MQTT Subscribe Task\r\n");
-
-  while(1)
-  {
-    if(!mqttClient.isconnected)
-    {
-      //try to connect to the broker
-      MQTTDisconnect(&mqttClient);
-      MqttConnectBroker();
-      osDelay(1000);
-    }
-    else
-    {
-      MQTTYield(&mqttClient, 1000); //handle timer
-      osDelay(100);
-    }
-
-    //printf( "Run MQTT Subscribe Task\r\n");
-  }
-}
-
-void MqttClientPubTask(void const *argument)
-{
-  int count = 0;
-  uint8_t buff[64];
-
-  MQTTMessage message;
-
-  printf( "start MQTT Publish Task\r\n");
-
-  while(1)
-  {
-    if(mqttClient.isconnected)
-    {
-      memset(buff, 0, sizeof(buff));
-      snprintf((char*)buff, sizeof(buff), "%d", count++);
-      message.payload = (void*)buff;
-      message.payloadlen = strlen((char*)buff);
-
-      if(MQTTPublish(&mqttClient, "test", &message) != MQTT_SUCCESS)
+   while(1)
+   {
+      //waiting for valid ip address
+      if (gnetif.ip_addr.addr == 0 || gnetif.netmask.addr == 0 )//|| gnetif.gw.addr == 0)
       {
-         printf( "MQTTPublish failed.\r\n" );
-        MQTTCloseSession(&mqttClient);
-        net_disconnect(&net);
+         osDelay(1000);
+         continue;
       }
-    }
+      else
+      {
+         printf("DHCP/Static IP O.K.\r\n");
+         break;
+      }
+   }
 
-    osDelay(1000);
-    //printf( "Run MQTT Publish Task\r\n");
-  }
+   printf( "Run MQTT Subscribe Task\r\n");
+
+   while(1)
+   {
+      if(!mqttClient.isconnected)
+      {
+         //try to connect to the broker
+         MQTTDisconnect(&mqttClient);
+         mqttConnectBroker();
+         osDelay(1000);
+      }
+      else
+      {
+         MQTTYield(&mqttClient, 1000); //handle timer
+         osDelay(100);
+      }
+   }
 }
 
-int MqttConnectBroker()
+void mqttClientPubTask( void const *argument )
 {
-  int ret;
+   int count = 0;
+   uint8_t buff[64];
 
-  printf( "start MQTT Connect Broker\r\n");
+   MQTTMessage message;
 
-  NewNetwork(&net);
-  ret = ConnectNetwork(&net, BROKER_IP, MQTT_PORT);
-  if(ret != MQTT_SUCCESS)
-  {
-    printf("ConnectNetwork failed.\n");
-    net_disconnect(&net);
-    return -1;
-  }
+   printf( "start MQTT Publish Task\r\n");
 
-  printf( "MQTTPacket_connectData O.K\r\n");
+   while(1)
+   {
+      if( mqttClient.isconnected )
+      {
+         memset(buff, 0, sizeof(buff));
+         snprintf((char*)buff, sizeof(buff), "%d", count++);
+         message.payload = (void*)buff;
+         message.payloadlen = strlen((char*)buff);
 
-  MQTTClientInit(&mqttClient, &net, 1000, sndBuffer, sizeof(sndBuffer), rcvBuffer, sizeof(rcvBuffer));
+         if(MQTTPublish( &mqttClient, "test", &message ) != MQTT_SUCCESS)
+         {
+            printf( "MQTTPublish failed.\r\n" );
+            MQTTCloseSession( &mqttClient );
+            net_disconnect( &net );
+         }
+      }
 
-  MQTTPacket_connectData data = MQTTPacket_connectData_initializer;
-  data.willFlag = 0;
-  data.MQTTVersion = 3;
-  data.clientID.cstring = "STM32F4";
-  data.username.cstring = "STM32F4";
-  data.password.cstring = "";
-  data.keepAliveInterval = 60;
-  data.cleansession = 1;
-
-  ret = MQTTConnect(&mqttClient, &data);
-  if(ret != MQTT_SUCCESS)
-  {
-    printf("MQTTConnect failed.\n");
-    MQTTCloseSession(&mqttClient);
-    net_disconnect(&net);
-    return ret;
-  }
-
-  ret = MQTTSubscribe(&mqttClient, "test", QOS0, MqttMessageArrived);
-  if(ret != MQTT_SUCCESS)
-  {
-    printf("MQTTSubscribe failed.\n");
-    MQTTCloseSession(&mqttClient);
-    net_disconnect(&net);
-    return ret;
-  }
-
-  printf("MQTT_ConnectBroker O.K.\r\n");
-  return MQTT_SUCCESS;
+   osDelay( 1000 );
+   }
 }
 
-void MqttMessageArrived(MessageData* msg)
+int mqttConnectBroker()
 {
-  HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin); //toggle pin when new message arrived
+   int ret;
+
+   printf( "start MQTT Connect Broker\r\n" );
+
+   NewNetwork(&net);
+   ret = ConnectNetwork( &net, BROKER_IP, MQTT_PORT );
+   if(ret != MQTT_SUCCESS)
+   {
+      printf( "ConnectNetwork failed.\n" );
+      net_disconnect( &net );
+      return -1;
+   }
+
+   printf( "MQTTPacket_connectData O.K\r\n" );
+
+   MQTTClientInit( &mqttClient, &net, 1000, sndBuffer, sizeof(sndBuffer), rcvBuffer, sizeof(rcvBuffer) );
+
+   MQTTPacket_connectData data = MQTTPacket_connectData_initializer;
+   data.willFlag = 0;
+   data.MQTTVersion = 3;
+   data.clientID.cstring = "STM32F4";
+   data.username.cstring = "STM32F4";
+   data.password.cstring = "";
+   data.keepAliveInterval = 60;
+   data.cleansession = 1;
+
+   ret = MQTTConnect( &mqttClient, &data );
+   if(ret != MQTT_SUCCESS)
+   {
+      printf( "MQTTConnect failed.\n" );
+      MQTTCloseSession( &mqttClient );
+      net_disconnect( &net );
+      return ret;
+   }
+
+   ret = MQTTSubscribe( &mqttClient, "test", QOS0, mqttMessageArrived);
+   if(ret != MQTT_SUCCESS)
+   {
+      printf("MQTTSubscribe failed.\n");
+      MQTTCloseSession( &mqttClient );
+      net_disconnect( &net );
+      return ret;
+   }
+
+   printf( "MQTT_ConnectBroker O.K.\r\n" );
+   return MQTT_SUCCESS;
+}
+
+void mqttMessageArrived(MessageData* msg)
+{
+  HAL_GPIO_TogglePin( LD2_GPIO_Port, LD2_Pin );
 
   MQTTMessage* message = msg->message;
-  memset(msgBuffer, 0, sizeof(msgBuffer));
-  memcpy(msgBuffer, message->payload,message->payloadlen);
+  memset( msgBuffer, 0, sizeof( msgBuffer ) );
+  memcpy( msgBuffer, message->payload,message->payloadlen );
 
-  printf("MQTT MSG[%d]:%s\r\n", (int)message->payloadlen, msgBuffer);
+  printf( "MQTT MSG[%d]:%s\r\n", (int)message->payloadlen, msgBuffer );
 }
 
 /* USER CODE END Application */
