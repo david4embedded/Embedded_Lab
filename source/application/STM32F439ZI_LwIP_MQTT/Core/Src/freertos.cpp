@@ -122,8 +122,8 @@ void MX_FREERTOS_Init(void)
 
    /* Create the thread(s) */
    /* definition and creation of defaultTask */
-   osThreadDef( defaultTask, startDefaultTask, osPriorityNormal, 0, 512 );
-   defaultTaskHandle = osThreadCreate( osThread( defaultTask ), NULL );
+   const osThreadDef_t defaultTaskDef = { const_cast<char*>( "defaultTask" ), startDefaultTask, osPriorityNormal, 0, 512, nullptr, nullptr };
+   defaultTaskHandle = osThreadCreate( &defaultTaskDef, nullptr );
 
    /* USER CODE BEGIN RTOS_THREADS */
    /* add threads, ... */
@@ -145,12 +145,12 @@ void startDefaultTask(void const * argument)
    /* USER CODE BEGIN startDefaultTask */
    PARAM_NOT_USED( argument );
 
-   osThreadDef( mqttClientSubTask, mqttClientSubTask, osPriorityNormal, 0, configMINIMAL_STACK_SIZE );
-   osThreadDef( mqttClientPubTask, mqttClientPubTask, osPriorityNormal, 0, configMINIMAL_STACK_SIZE );
+   const osThreadDef_t mqttClientSubTaskDef = { const_cast<char*>( "mqttClientSubTask" ), mqttClientSubTask, osPriorityNormal, 0, configMINIMAL_STACK_SIZE, nullptr, nullptr };
+   const osThreadDef_t mqttClientPubTaskDef = { const_cast<char*>( "mqttClientPubTask" ), mqttClientPubTask, osPriorityNormal, 0, configMINIMAL_STACK_SIZE, nullptr, nullptr };
 
-   mqttClientSubTaskHandle = osThreadCreate(osThread(mqttClientSubTask), NULL);
+   mqttClientSubTaskHandle = osThreadCreate( &mqttClientSubTaskDef, nullptr );
    osDelay( 1000 );
-   mqttClientPubTaskHandle = osThreadCreate(osThread(mqttClientPubTask), NULL);
+   mqttClientPubTaskHandle = osThreadCreate( &mqttClientPubTaskDef, nullptr );
 
    /* Infinite loop */
    for(;;)
@@ -249,9 +249,9 @@ int mqttConnectBroker( )
    MQTTPacket_connectData data = MQTTPacket_connectData_initializer;
    data.willFlag = 0;
    data.MQTTVersion = 3;
-   data.clientID.cstring = "STM32F4";
-   data.username.cstring = "STM32F4";
-   data.password.cstring = "";
+   data.clientID.cstring = const_cast<char*>("STM32F4");
+   data.username.cstring = const_cast<char*>("STM32F4");
+   data.password.cstring = const_cast<char*>("");
    data.keepAliveInterval = 60;
    data.cleansession = 1;
 
