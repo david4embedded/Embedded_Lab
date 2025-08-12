@@ -82,7 +82,7 @@ bool MqttManagerPaho::connectToBroker( const MqttBroker& broker, uint32_t timeou
 
    m_connected = true;
 
-   LOGGING( "MQTT: Connect succeeded" );
+   LOGGING( "MQTT: Connect to the broker succeeded" );
 
    return true;
 }
@@ -120,6 +120,7 @@ bool MqttManagerPaho::connectToNetwork( const MqttBroker& broker )
 		return false;
 	}
 
+   LOGGING( "MQTT: Connect to the network succeeded" );
 	return true;
 }
 
@@ -131,6 +132,7 @@ bool MqttManagerPaho::connectToNetwork( const MqttBroker& broker )
  */
 bool MqttManagerPaho::waitNetworkRunning( uint32_t timeout_ms /* = 5000 */ ) const
 {
+   LOGGING( "MQTT: Waiting for network to be ready..." );
    auto tick_started = osKernelSysTick();
    while ( 1 )
    {
@@ -149,6 +151,7 @@ bool MqttManagerPaho::waitNetworkRunning( uint32_t timeout_ms /* = 5000 */ ) con
       }
    }
 
+   LOGGING( "MQTT: Waiting ... done" );
    return true;
 }
 
