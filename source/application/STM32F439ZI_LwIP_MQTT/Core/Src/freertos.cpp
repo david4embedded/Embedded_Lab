@@ -42,30 +42,18 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-constexpr const char* BROKER_IP = "192.168.1.2";
-constexpr uint16_t MQTT_PORT = 1883;
-constexpr size_t MQTT_BUFSIZE = 1024;
 
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-#define NEW_MQTT_INTERFACE
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
-extern struct netif gnetif;
-
-osThreadId  mqttClientSubTaskHandle; 
-osThreadId  mqttClientPubTaskHandle; 
-Network     net; 
-MQTTClient  mqttClient; 
-
-uint8_t     mqttSendBuffer[MQTT_BUFSIZE]; 
-uint8_t     mqttRecvBuffer[MQTT_BUFSIZE];  
-
-static MqttBroker  broker = { BROKER_IP, MQTT_PORT };
+static osThreadId  mqttClientSubTaskHandle; 
+static osThreadId  mqttClientPubTaskHandle; 
+static MqttBroker  broker{ "192.168.1.2", 1883 };
 static MqttManager mqttManager{ "NucleoF439", "NucleoF439" };
 
 /* USER CODE END Variables */
@@ -73,10 +61,10 @@ osThreadId defaultTaskHandle;
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
-void  mqttClientSubTask           ( void const *argument );
-void  mqttClientPubTask           ( void const *argument );
-int   mqttConnectBroker           ( );
-void  mqttMsgArrivedCallback  ( MessageData* msg );
+void  mqttClientSubTask          ( void const *argument );
+void  mqttClientPubTask          ( void const *argument );
+int   mqttConnectBroker          ( );
+void  mqttMsgArrivedCallback     ( MessageData* msg );
 
 /* USER CODE END FunctionPrototypes */
 
@@ -152,37 +140,17 @@ void startDefaultTask(void const * argument)
    const osThreadDef_t subscribeTaskDef = { const_cast<char*>( "mqttSubscribeTask" ), mqttClientSubTask, osPriorityNormal, 0, configMINIMAL_STACK_SIZE, nullptr, nullptr };
    const osThreadDef_t publishTaskDef = { const_cast<char*>( "mqttPublishTask" ), mqttClientPubTask, osPriorityNormal, 0, configMINIMAL_STACK_SIZE, nullptr, nullptr };
 
-#if defined ( NEW_MQTT_INTERFACE )
    mqttManager.connectToBroker( broker, 5000 );
 
-   auto result = mqttManager.subscribe( "test", mqttMsgArrivedCallback );
-   if( result != true )
+   if(  mqttManager.subscribe( "test", mqttMsgArrivedCallback ) == true )
    {
-      LOGGING( "MQTT Subscribe failed." );
+      mqttClientSubTaskHandle = osThreadCreate( &subscribeTaskDef, nullptr );
+      mqttClientPubTaskHandle = osThreadCreate( &publishTaskDef, nullptr );
    }
 
-   mqttClientSubTaskHandle = osThreadCreate( &subscribeTaskDef, nullptr );
-   mqttClientPubTaskHandle = osThreadCreate( &publishTaskDef, nullptr );
-
-   int count = 0;
-   uint8_t buff[64] = {};
-#else
-   mqttClientSubTaskHandle = osThreadCreate( &subscribeTaskDef, nullptr );
-   mqttClientPubTaskHandle = osThreadCreate( &publishTaskDef, nullptr );
-#endif
-
-   /* Infinite loop */
    for(;;)
    {
-#if defined ( NEW_MQTT_INTERFACE )      
-      // if ( mqttManager.isConnected() )
-      // {
-      //    memset( buff, 0, sizeof( buff ) );
-      //    snprintf( (char*)buff, sizeof( buff ), "Hello, #%d", count++ );
-      //    mqttManager.publish( "test", (char*)buff );
-      // }
-#endif
-      osDelay( 500 );
+      osDelay( 10000 );
    }
    /* USER CODE END startDefaultTask */
 }
@@ -192,9 +160,8 @@ void startDefaultTask(void const * argument)
 void mqttClientSubTask( void const *argument )
 {
    PARAM_NOT_USED( argument );
-   LOGGING( "start MQTT Subscribe Task" );
+   LOGGING( "Start MQTT Subscribe Task" );
 
-#if defined ( NEW_MQTT_INTERFACE )
    for(;;)
    {
       if ( mqttManager.isConnected() )
@@ -203,127 +170,27 @@ void mqttClientSubTask( void const *argument )
       }
       osDelay(100);
    }
-#else
-   for(;;)
-   {
-      if ( gnetif.ip_addr.addr == 0 || gnetif.netmask.addr == 0 )//|| gnetif.gw.addr == 0)
-      {
-         osDelay(1000);
-         continue;
-      }
-      else
-      {
-         break;
-      }
-   }
-
-   LOGGING( "Run MQTT Subscribe Task" );
-
-   for(;;)
-   {
-      if( !mqttClient.isconnected )
-      {
-         MQTTDisconnect( &mqttClient );
-         mqttConnectBroker();
-         osDelay(1000);
-      }
-      else
-      {
-         MQTTYield( &mqttClient, 1000 );
-         osDelay( 100 );
-      }
-   }
-#endif
 }
 
 void mqttClientPubTask( void const *argument )
 {
    PARAM_NOT_USED( argument );
 
-   int count = 0;
-   uint8_t buff[64] = {};
-   MQTTMessage message;
-
-   LOGGING( "start MQTT Publish Task");
+   LOGGING( "Start MQTT Publish Task");
+   uint32_t count = 0;
 
    for(;;)
    {
-#if defined ( NEW_MQTT_INTERFACE )
       if ( mqttManager.isConnected() )
       {
+         uint8_t buff[64] = {};
          memset( buff, 0, sizeof( buff ) );
-         snprintf( (char*)buff, sizeof( buff ), "Hello, #%d", count++ );
+         snprintf( (char*)buff, sizeof( buff ), "Hello, #%lu", count++ );
          mqttManager.publish( "test", (char*)buff );
       }
 
       osDelay( 500 );
-#else
-      if( mqttClient.isconnected )
-      {
-         memset( buff, 0, sizeof(buff) );
-         snprintf( (char*)buff, sizeof(buff), "%d", count++);
-         message.payload = reinterpret_cast<void*>( buff );
-         message.payloadlen = strlen((char*)buff);
-
-         if( MQTTPublish( &mqttClient, "test", &message ) != MQTT_SUCCESS )
-         {
-            LOGGING( "MQTTPublish failed." );
-            MQTTCloseSession( &mqttClient );
-            net.disconnect( &net );
-         }
-      }
-
-      osDelay( 500 );
-#endif
    }
-}
-
-int mqttConnectBroker( )
-{
-   LOGGING( "start MQTT Connect Broker" );
-
-   configureNetworkObject( &net );
-   auto ret = connectNetwork( &net, const_cast<char*>( BROKER_IP ), MQTT_PORT );
-   if( ret != MQTT_SUCCESS )
-   {
-      LOGGING( "connectNetwork failed." );
-      net.disconnect( &net );
-      return -1;
-   }
-
-   LOGGING( "MQTTPacket_connectData O.K" );
-
-   MQTTClientInit( &mqttClient, &net, 1000, mqttSendBuffer, sizeof(mqttSendBuffer), mqttRecvBuffer, sizeof(mqttRecvBuffer) );
-
-   MQTTPacket_connectData data = MQTTPacket_connectData_initializer;
-   data.willFlag = 0;
-   data.MQTTVersion = 3;
-   data.clientID.cstring = const_cast<char*>("STM32F4");
-   data.username.cstring = const_cast<char*>("STM32F4");
-   data.password.cstring = const_cast<char*>("");
-   data.keepAliveInterval = 60;
-   data.cleansession = 1;
-
-   ret = MQTTConnect( &mqttClient, &data );
-   if(ret != MQTT_SUCCESS)
-   {
-      LOGGING( "MQTTConnect failed." );
-      MQTTCloseSession( &mqttClient );
-      net.disconnect( &net );
-      return ret;
-   }
-
-   ret = MQTTSubscribe( &mqttClient, "test", QOS0, mqttMsgArrivedCallback );
-   if(ret != MQTT_SUCCESS)
-   {
-      LOGGING( "MQTTSubscribe failed." );
-      MQTTCloseSession( &mqttClient );
-      net.disconnect( &net );
-      return ret;
-   }
-
-   LOGGING( "MQTT_ConnectBroker O.K." );
-   return MQTT_SUCCESS;
 }
 
 void mqttMsgArrivedCallback( MessageData* msg )
@@ -332,7 +199,7 @@ void mqttMsgArrivedCallback( MessageData* msg )
 
   const auto* message = msg->message;
 
-  uint8_t msgBuffer[MQTT_BUFSIZE];
+  uint8_t msgBuffer[1024];
   memset( msgBuffer, 0, sizeof( msgBuffer ) );
   memcpy( msgBuffer, message->payload,message->payloadlen );
 
