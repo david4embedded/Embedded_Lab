@@ -40,17 +40,13 @@ static StaticTask_t     xIdleTaskTCBBuffer;
 static StackType_t      xIdleStack[configMINIMAL_STACK_SIZE];
 
 /******************************************** Function Declarations *******************************************/
+void  startDefaultTask           (void const * argument);
 void  mqttClientSubTask          ( void const *argument );
 void  mqttClientPubTask          ( void const *argument );
 int   mqttConnectBroker          ( );
 void  mqttMsgArrivedCallback     ( MessageData* msg );
 
-void  startDefaultTask           (void const * argument);
-
-/* GetIdleTaskMemory prototype (linked to static allocation support) */
 extern "C" void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer, StackType_t **ppxIdleTaskStackBuffer, uint32_t *pulIdleTaskStackSize );
-
-/* Hook prototypes */
 extern "C" void vApplicationStackOverflowHook(xTaskHandle xTask, signed char *pcTaskName);
 
 /******************************************** Function Definitions ********************************************/
@@ -126,15 +122,21 @@ void mqttClientPubTask( void const *argument )
 
    LOGGING( "Start MQTT Publish Task");
    uint32_t count = 0;
+   char buffer[64] = {};
+
+   //!< Lambda function to create the message payload
+   auto lambdaCreatePayload = [&buffer]( auto count ) 
+   {
+      memset( buffer, 0, sizeof( buffer ) );
+      snprintf( buffer, sizeof( buffer ), "Hello, #%lu", count );
+      return buffer;
+   };
 
    for(;;)
    {
       if ( mqttManager.isConnected() )
       {
-         uint8_t buff[64] = {};
-         memset( buff, 0, sizeof( buff ) );
-         snprintf( (char*)buff, sizeof( buff ), "Hello, #%lu", count++ );
-         mqttManager.publish( "test", (char*)buff );
+         mqttManager.publish( "test", lambdaCreatePayload( count++ ) );
       }
 
       osDelay( 500 );
@@ -155,7 +157,7 @@ void mqttMsgArrivedCallback( MessageData* msg )
    char* payload = static_cast<char*>( msg->message->payload );
    payload[length] = '\0';
 
-   LOGGING( "MQTT: MSG: %s (len=%d)", payload, length );
+   LOGGING( "MQTT: MSG[%d]: %s", length, payload );
 }
 
 /**
@@ -167,9 +169,9 @@ void mqttMsgArrivedCallback( MessageData* msg )
  */
 void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer, StackType_t **ppxIdleTaskStackBuffer, uint32_t *pulIdleTaskStackSize )
 {
-  *ppxIdleTaskTCBBuffer = &xIdleTaskTCBBuffer;
-  *ppxIdleTaskStackBuffer = &xIdleStack[0];
-  *pulIdleTaskStackSize = configMINIMAL_STACK_SIZE;
+   *ppxIdleTaskTCBBuffer = &xIdleTaskTCBBuffer;
+   *ppxIdleTaskStackBuffer = &xIdleStack[0];
+   *pulIdleTaskStackSize = configMINIMAL_STACK_SIZE;
 }
 
 /**
