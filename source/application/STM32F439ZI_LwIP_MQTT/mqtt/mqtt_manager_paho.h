@@ -1,43 +1,64 @@
+/*************************************************************************************************************
+ * 
+ * @file mqtt_manager_paho.h
+ * @brief Header file for the MQTTManagerPaho class, which provides an interface for MQTT communication.
+ * 
+ * @author Sungsu Kim
+ * @copyright 2025 Sungsu Kim
+ * @date 2025-08-12
+ * @version 1.0
+ * 
+ *************************************************************************************************************/
 
 #pragma once
 
+/************************************************** Includes *************************************************/
 #include "MQTTClient.h"
 #include "mqtt_client_port.h"
 #include <stdint.h>
 
+/************************************************** Types ****************************************************/
+/**
+ * @brief Represents an MQTT broker.
+ */
 struct MqttBroker
 {
-   const char* ip;
-   uint32_t port;
+   const char* ip;   //!< IP address information
+   uint32_t port;    //!< Port number
 };
 
-class MqttManager 
+/**
+ * @brief Represents an MQTT client manager.
+ * @details This class provides an interface for MQTT communication, including methods for connecting to a broker, publishing messages, and subscribing to topics.
+ *          This class, specifically, is designed to work with the Paho MQTT C++ client.
+ */
+class MqttManagerPaho 
 {
 public:
    using MessageArrivedCallback = void(*)( MessageData* );
    constexpr static size_t MQTT_BUFSIZE = 1024;
 
-   MqttManager( const char* clientName, const char* userName, const char* password = nullptr )
+   MqttManagerPaho( const char* clientName, const char* userName, const char* password = nullptr )
    : m_clientName( clientName )
    , m_userName( userName )
    , m_password( password )
    { }
 
-   ~MqttManager()
+   ~MqttManagerPaho()
    { }
 
-   bool  connectToBroker       ( const MqttBroker& broker, uint32_t timeout_ms = 5000 );
-   void  disconnect            ( );
-   bool  publish               ( const char* topic, const char* payload );
-   bool  subscribe             ( const char* topic, MessageArrivedCallback callback );
+   bool  connectToBroker               ( const MqttBroker& broker, uint32_t timeout_ms = 5000 );
+   void  disconnect                    ( );
+   bool  publish                       ( const char* topic, const char* payload );
+   bool  subscribe                     ( const char* topic, MessageArrivedCallback callback );
 
-   void  processBackgroundTask ( );
+   void  processBackgroundTask         ( );
 
-   bool  isConnected           ( ) const;
+   bool  isConnected                   ( ) const;
 
 protected:
-   bool  connectToNetwork      ( const MqttBroker& broker );
-   bool  waitNetworkRunning    ( uint32_t timeout_ms = 5000) const;
+   bool  connectToNetwork              ( const MqttBroker& broker );
+   bool  waitNetworkRunning            ( uint32_t timeout_ms = 5000) const;
 
    static int  readFromNetwork         ( Network*, unsigned char*, int, int );
    static int  writeToNetwork          ( Network*, unsigned char*, int, int );

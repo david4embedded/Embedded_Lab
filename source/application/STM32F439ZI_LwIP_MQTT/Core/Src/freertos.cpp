@@ -15,7 +15,6 @@
  *
  ******************************************************************************
  */
-/* USER CODE END Header */
 
 /* Includes ------------------------------------------------------------------*/
 #include "FreeRTOS.h"
@@ -25,7 +24,6 @@
 #include "common.h"
 
 /* Private includes ----------------------------------------------------------*/
-/* USER CODE BEGIN Includes */
 #include <string.h>
 #include "lwip.h"
 #include "lwip/api.h"
@@ -33,40 +31,19 @@
 #include "mqtt_client_port.h"
 #include "mqtt_manager_paho.h"
 
-/* USER CODE END Includes */
-
-/* Private typedef -----------------------------------------------------------*/
-/* USER CODE BEGIN PTD */
-
-/* USER CODE END PTD */
-
-/* Private define ------------------------------------------------------------*/
-/* USER CODE BEGIN PD */
-
-/* USER CODE END PD */
-
-/* Private macro -------------------------------------------------------------*/
-/* USER CODE BEGIN PM */
-/* USER CODE END PM */
-
 /* Private variables ---------------------------------------------------------*/
-/* USER CODE BEGIN Variables */
 static osThreadId  mqttClientSubTaskHandle; 
 static osThreadId  mqttClientPubTaskHandle; 
 static MqttBroker  broker{ "192.168.1.2", 1883 };
-static MqttManager mqttManager{ "NucleoF439", "NucleoF439" };
+static MqttManagerPaho mqttManager{ "NucleoF439", "NucleoF439" };
 
-/* USER CODE END Variables */
 osThreadId defaultTaskHandle;
 
 /* Private function prototypes -----------------------------------------------*/
-/* USER CODE BEGIN FunctionPrototypes */
 void  mqttClientSubTask          ( void const *argument );
 void  mqttClientPubTask          ( void const *argument );
 int   mqttConnectBroker          ( );
 void  mqttMsgArrivedCallback     ( MessageData* msg );
-
-/* USER CODE END FunctionPrototypes */
 
 void startDefaultTask(void const * argument);
 
@@ -76,10 +53,6 @@ extern "C" void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuff
 /* Hook prototypes */
 extern "C" void vApplicationStackOverflowHook(xTaskHandle xTask, signed char *pcTaskName);
 
-/* USER CODE BEGIN 4 */
-/* USER CODE END 4 */
-
-/* USER CODE BEGIN GET_IDLE_TASK_MEMORY */
 static StaticTask_t xIdleTaskTCBBuffer;
 static StackType_t xIdleStack[configMINIMAL_STACK_SIZE];
 
@@ -92,34 +65,8 @@ static StackType_t xIdleStack[configMINIMAL_STACK_SIZE];
   */
 void MX_FREERTOS_Init(void) 
 {
-   /* USER CODE BEGIN Init */
-
-   /* USER CODE END Init */
-
-   /* USER CODE BEGIN RTOS_MUTEX */
-   /* add mutexes, ... */
-   /* USER CODE END RTOS_MUTEX */
-
-   /* USER CODE BEGIN RTOS_SEMAPHORES */
-   /* add semaphores, ... */
-   /* USER CODE END RTOS_SEMAPHORES */
-
-   /* USER CODE BEGIN RTOS_TIMERS */
-   /* start timers, add new ones, ... */
-   /* USER CODE END RTOS_TIMERS */
-
-   /* USER CODE BEGIN RTOS_QUEUES */
-   /* add queues, ... */
-   /* USER CODE END RTOS_QUEUES */
-
-   /* Create the thread(s) */
-   /* definition and creation of defaultTask */
    const osThreadDef_t defaultTaskDef = { const_cast<char*>( "defaultTask" ), startDefaultTask, osPriorityNormal, 0, 512, nullptr, nullptr };
    defaultTaskHandle = osThreadCreate( &defaultTaskDef, nullptr );
-
-   /* USER CODE BEGIN RTOS_THREADS */
-   /* add threads, ... */
-   /* USER CODE END RTOS_THREADS */
 }
 
 /* USER CODE BEGIN Header_StartDefaultTask */
@@ -131,17 +78,17 @@ void MX_FREERTOS_Init(void)
 /* USER CODE END Header_StartDefaultTask */
 void startDefaultTask(void const * argument)
 {
-   /* init code for LWIP */
    MX_LWIP_Init();
 
-   /* USER CODE BEGIN startDefaultTask */
    PARAM_NOT_USED( argument );
 
    const osThreadDef_t subscribeTaskDef = { const_cast<char*>( "mqttSubscribeTask" ), mqttClientSubTask, osPriorityNormal, 0, configMINIMAL_STACK_SIZE, nullptr, nullptr };
    const osThreadDef_t publishTaskDef = { const_cast<char*>( "mqttPublishTask" ), mqttClientPubTask, osPriorityNormal, 0, configMINIMAL_STACK_SIZE, nullptr, nullptr };
 
+   //!< Connect to the broker
    mqttManager.connectToBroker( broker, 5000 );
 
+   //!< Subscribe to the 'test' topic and register the callback
    if(  mqttManager.subscribe( "test", mqttMsgArrivedCallback ) == true )
    {
       mqttClientSubTaskHandle = osThreadCreate( &subscribeTaskDef, nullptr );
@@ -152,11 +99,15 @@ void startDefaultTask(void const * argument)
    {
       osDelay( 10000 );
    }
-   /* USER CODE END startDefaultTask */
 }
 
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
+/**
+ * @brief MQTT Client Subscribe Task
+ * 
+ * @param argument task argument
+ */
 void mqttClientSubTask( void const *argument )
 {
    PARAM_NOT_USED( argument );
@@ -172,6 +123,11 @@ void mqttClientSubTask( void const *argument )
    }
 }
 
+/**
+ * @brief MQTT Client Publish Task
+ * 
+ * @param argument task argument
+ */
 void mqttClientPubTask( void const *argument )
 {
    PARAM_NOT_USED( argument );
@@ -193,19 +149,30 @@ void mqttClientPubTask( void const *argument )
    }
 }
 
+/**
+ * @brief MQTT Message Arrived Callback
+ * 
+ * @param msg a pointer to the MessageData structure
+ */
 void mqttMsgArrivedCallback( MessageData* msg )
 {
-  HAL_GPIO_TogglePin( LD2_GPIO_Port, LD2_Pin );
+   HAL_GPIO_TogglePin( LD2_GPIO_Port, LD2_Pin );
 
-  const auto* message = msg->message;
+   //!< Set the last byte to zero to not see garbage
+   auto length = msg->message->payloadlen;
+   char* payload = static_cast<char*>( msg->message->payload );
+   payload[length] = '\0';
 
-  uint8_t msgBuffer[1024];
-  memset( msgBuffer, 0, sizeof( msgBuffer ) );
-  memcpy( msgBuffer, message->payload,message->payloadlen );
-
-  LOGGING( "MQTT MSG[%d]:%s", (int)message->payloadlen, msgBuffer );
+   LOGGING( "MQTT: MSG: %s (len=%d)", payload, length );
 }
 
+/**
+ * @brief Get memory requirements for the Idle task
+ * 
+ * @param ppxIdleTaskTCBBuffer double pointer to the Idle task's TCB
+ * @param ppxIdleTaskStackBuffer double pointer to the Idle task's stack
+ * @param pulIdleTaskStackSize pointer to the Idle task's stack size
+ */
 void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer, StackType_t **ppxIdleTaskStackBuffer, uint32_t *pulIdleTaskStackSize )
 {
   *ppxIdleTaskTCBBuffer = &xIdleTaskTCBBuffer;
@@ -213,6 +180,12 @@ void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer, StackTy
   *pulIdleTaskStackSize = configMINIMAL_STACK_SIZE;
 }
 
+/**
+ * @brief Stack overflow hook
+ * 
+ * @param xTask a task handle
+ * @param pcTaskName a pointer to the task name
+ */
 void vApplicationStackOverflowHook(xTaskHandle xTask, signed char *pcTaskName)
 {
    PARAM_NOT_USED( xTask );
@@ -221,4 +194,3 @@ void vApplicationStackOverflowHook(xTaskHandle xTask, signed char *pcTaskName)
    HAL_GPIO_WritePin( LD3_GPIO_Port, LD3_Pin, GPIO_PIN_SET );
 }
 
-/* USER CODE END Application */
