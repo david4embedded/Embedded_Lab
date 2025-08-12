@@ -145,12 +145,12 @@ void startDefaultTask(void const * argument)
    /* USER CODE BEGIN startDefaultTask */
    PARAM_NOT_USED( argument );
 
-   const osThreadDef_t mqttClientSubTaskDef = { const_cast<char*>( "mqttClientSubTask" ), mqttClientSubTask, osPriorityNormal, 0, configMINIMAL_STACK_SIZE, nullptr, nullptr };
-   const osThreadDef_t mqttClientPubTaskDef = { const_cast<char*>( "mqttClientPubTask" ), mqttClientPubTask, osPriorityNormal, 0, configMINIMAL_STACK_SIZE, nullptr, nullptr };
+   const osThreadDef_t subscribeTaskDef = { const_cast<char*>( "mqttSubscribeTask" ), mqttClientSubTask, osPriorityNormal, 0, configMINIMAL_STACK_SIZE, nullptr, nullptr };
+   const osThreadDef_t publishTaskDef = { const_cast<char*>( "mqttPublishTask" ), mqttClientPubTask, osPriorityNormal, 0, configMINIMAL_STACK_SIZE, nullptr, nullptr };
 
-   mqttClientSubTaskHandle = osThreadCreate( &mqttClientSubTaskDef, nullptr );
+   mqttClientSubTaskHandle = osThreadCreate( &subscribeTaskDef, nullptr );
    osDelay( 1000 );
-   mqttClientPubTaskHandle = osThreadCreate( &mqttClientPubTaskDef, nullptr );
+   mqttClientPubTaskHandle = osThreadCreate( &publishTaskDef, nullptr );
 
    /* Infinite loop */
    for(;;)
