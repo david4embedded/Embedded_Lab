@@ -40,7 +40,8 @@ target_include_directories(stm32cubemx INTERFACE
     ../../Middlewares/Third_Party/LwIP/src/include/compat/posix/sys
     ../../Middlewares/Third_Party/LwIP/src/include/compat/stdc
     ../../Middlewares/Third_Party/LwIP/system/arch
-    ../../Middlewares/Third_Party/paho.mqtt/
+    ../../mqtt
+    ../../Middlewares/Third_Party/paho.mqtt
     ../../Middlewares/Third_Party/paho.mqtt/MQTTPacket
     ../../Drivers/CMSIS/Include
 )
@@ -167,7 +168,8 @@ target_sources(stm32cubemx INTERFACE
     ../../Middlewares/Third_Party/LwIP/src/core/ipv6/nd6.c
     ../../Middlewares/Third_Party/LwIP/system/OS/sys_arch.c
     ../../Middlewares/Third_Party/LwIP/src/apps/mqtt/mqtt.c
-    ../../Middlewares/Third_Party/paho.mqtt/MQTTInterface.c
+    ../../mqtt/mqtt_client_port.c
+    ../../mqtt/mqtt_manager_paho.cpp
     ../../Middlewares/Third_Party/paho.mqtt/MQTTClient.c
     ../../Middlewares/Third_Party/paho.mqtt/MQTTPacket/MQTTConnectClient.c
     ../../Middlewares/Third_Party/paho.mqtt/MQTTPacket/MQTTConnectServer.c

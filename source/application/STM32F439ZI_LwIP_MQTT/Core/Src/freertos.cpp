@@ -30,7 +30,8 @@
 #include "lwip.h"
 #include "lwip/api.h"
 #include "MQTTClient.h"
-#include "MQTTInterface.h"
+#include "mqtt_client_port.h"
+#include "mqtt_manager_paho.h"
 
 /* USER CODE END Includes */
 
@@ -49,7 +50,7 @@ constexpr size_t MQTT_BUFSIZE = 1024;
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-
+#define NEW_MQTT_INTERFACE
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -64,6 +65,9 @@ MQTTClient  mqttClient;
 uint8_t     mqttSendBuffer[MQTT_BUFSIZE]; 
 uint8_t     mqttRecvBuffer[MQTT_BUFSIZE];  
 
+static MqttBroker  broker = { BROKER_IP, MQTT_PORT };
+static MqttManager mqttManager{ "NucleoF439", "NucleoF439" };
+
 /* USER CODE END Variables */
 osThreadId defaultTaskHandle;
 
@@ -72,7 +76,7 @@ osThreadId defaultTaskHandle;
 void  mqttClientSubTask           ( void const *argument );
 void  mqttClientPubTask           ( void const *argument );
 int   mqttConnectBroker           ( );
-void  mqttCallbackMessageArrived  ( MessageData* msg );
+void  mqttMsgArrivedCallback  ( MessageData* msg );
 
 /* USER CODE END FunctionPrototypes */
 
@@ -148,14 +152,37 @@ void startDefaultTask(void const * argument)
    const osThreadDef_t subscribeTaskDef = { const_cast<char*>( "mqttSubscribeTask" ), mqttClientSubTask, osPriorityNormal, 0, configMINIMAL_STACK_SIZE, nullptr, nullptr };
    const osThreadDef_t publishTaskDef = { const_cast<char*>( "mqttPublishTask" ), mqttClientPubTask, osPriorityNormal, 0, configMINIMAL_STACK_SIZE, nullptr, nullptr };
 
+#if defined ( NEW_MQTT_INTERFACE )
+   mqttManager.connectToBroker( broker, 5000 );
+
+   auto result = mqttManager.subscribe( "test", mqttMsgArrivedCallback );
+   if( result != true )
+   {
+      LOGGING( "MQTT Subscribe failed." );
+   }
+
    mqttClientSubTaskHandle = osThreadCreate( &subscribeTaskDef, nullptr );
-   osDelay( 1000 );
    mqttClientPubTaskHandle = osThreadCreate( &publishTaskDef, nullptr );
+
+   int count = 0;
+   uint8_t buff[64] = {};
+#else
+   mqttClientSubTaskHandle = osThreadCreate( &subscribeTaskDef, nullptr );
+   mqttClientPubTaskHandle = osThreadCreate( &publishTaskDef, nullptr );
+#endif
 
    /* Infinite loop */
    for(;;)
    {
-      osDelay( 1000 );
+#if defined ( NEW_MQTT_INTERFACE )      
+      // if ( mqttManager.isConnected() )
+      // {
+      //    memset( buff, 0, sizeof( buff ) );
+      //    snprintf( (char*)buff, sizeof( buff ), "Hello, #%d", count++ );
+      //    mqttManager.publish( "test", (char*)buff );
+      // }
+#endif
+      osDelay( 500 );
    }
    /* USER CODE END startDefaultTask */
 }
@@ -167,6 +194,16 @@ void mqttClientSubTask( void const *argument )
    PARAM_NOT_USED( argument );
    LOGGING( "start MQTT Subscribe Task" );
 
+#if defined ( NEW_MQTT_INTERFACE )
+   for(;;)
+   {
+      if ( mqttManager.isConnected() )
+      {
+         mqttManager.processBackgroundTask();
+      }
+      osDelay(100);
+   }
+#else
    for(;;)
    {
       if ( gnetif.ip_addr.addr == 0 || gnetif.netmask.addr == 0 )//|| gnetif.gw.addr == 0)
@@ -196,6 +233,7 @@ void mqttClientSubTask( void const *argument )
          osDelay( 100 );
       }
    }
+#endif
 }
 
 void mqttClientPubTask( void const *argument )
@@ -210,6 +248,16 @@ void mqttClientPubTask( void const *argument )
 
    for(;;)
    {
+#if defined ( NEW_MQTT_INTERFACE )
+      if ( mqttManager.isConnected() )
+      {
+         memset( buff, 0, sizeof( buff ) );
+         snprintf( (char*)buff, sizeof( buff ), "Hello, #%d", count++ );
+         mqttManager.publish( "test", (char*)buff );
+      }
+
+      osDelay( 500 );
+#else
       if( mqttClient.isconnected )
       {
          memset( buff, 0, sizeof(buff) );
@@ -221,11 +269,12 @@ void mqttClientPubTask( void const *argument )
          {
             LOGGING( "MQTTPublish failed." );
             MQTTCloseSession( &mqttClient );
-            net_disconnect( &net );
+            net.disconnect( &net );
          }
       }
 
       osDelay( 500 );
+#endif
    }
 }
 
@@ -233,12 +282,12 @@ int mqttConnectBroker( )
 {
    LOGGING( "start MQTT Connect Broker" );
 
-   NewNetwork( &net );
-   auto ret = ConnectNetwork( &net, const_cast<char*>( BROKER_IP ), MQTT_PORT );
+   configureNetworkObject( &net );
+   auto ret = connectNetwork( &net, const_cast<char*>( BROKER_IP ), MQTT_PORT );
    if( ret != MQTT_SUCCESS )
    {
-      LOGGING( "ConnectNetwork failed." );
-      net_disconnect( &net );
+      LOGGING( "connectNetwork failed." );
+      net.disconnect( &net );
       return -1;
    }
 
@@ -260,16 +309,16 @@ int mqttConnectBroker( )
    {
       LOGGING( "MQTTConnect failed." );
       MQTTCloseSession( &mqttClient );
-      net_disconnect( &net );
+      net.disconnect( &net );
       return ret;
    }
 
-   ret = MQTTSubscribe( &mqttClient, "test", QOS0, mqttCallbackMessageArrived );
+   ret = MQTTSubscribe( &mqttClient, "test", QOS0, mqttMsgArrivedCallback );
    if(ret != MQTT_SUCCESS)
    {
       LOGGING( "MQTTSubscribe failed." );
       MQTTCloseSession( &mqttClient );
-      net_disconnect( &net );
+      net.disconnect( &net );
       return ret;
    }
 
@@ -277,7 +326,7 @@ int mqttConnectBroker( )
    return MQTT_SUCCESS;
 }
 
-void mqttCallbackMessageArrived( MessageData* msg )
+void mqttMsgArrivedCallback( MessageData* msg )
 {
   HAL_GPIO_TogglePin( LD2_GPIO_Port, LD2_Pin );
 

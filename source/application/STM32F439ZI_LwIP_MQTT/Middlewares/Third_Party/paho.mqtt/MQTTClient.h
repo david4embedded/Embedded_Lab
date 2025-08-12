@@ -35,7 +35,7 @@
 #endif
 
 #include <MQTTPacket.h>
-#include <MQTTInterface.h>
+#include "mqtt_client_port.h"  //!< This must be providing the definitions of Network and Timer for the MQTT client
 
 #if defined(MQTTCLIENT_PLATFORM_HEADER)
 /* The following sequence of macros converts the MQTTCLIENT_PLATFORM_HEADER value

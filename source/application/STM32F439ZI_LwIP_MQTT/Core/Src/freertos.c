@@ -240,7 +240,7 @@ void MqttClientPubTask(void const *argument)
       {
          printf( "MQTTPublish failed.\r\n" );
         MQTTCloseSession(&mqttClient);
-        net_disconnect(&net);
+        mqtt_net_disconnect(&net);
       }
     }
 
@@ -255,12 +255,12 @@ int MqttConnectBroker()
 
   printf( "start MQTT Connect Broker\r\n");
 
-  NewNetwork(&net);
-  ret = ConnectNetwork(&net, BROKER_IP, MQTT_PORT);
+  configureNetworkObject(&net);
+  ret = connectNetwork(&net, BROKER_IP, MQTT_PORT);
   if(ret != MQTT_SUCCESS)
   {
-    printf("ConnectNetwork failed.\n");
-    net_disconnect(&net);
+    printf("connectNetwork failed.\n");
+    mqtt_net_disconnect(&net);
     return -1;
   }
 
@@ -282,7 +282,7 @@ int MqttConnectBroker()
   {
     printf("MQTTConnect failed.\n");
     MQTTCloseSession(&mqttClient);
-    net_disconnect(&net);
+    mqtt_net_disconnect(&net);
     return ret;
   }
 
@@ -291,7 +291,7 @@ int MqttConnectBroker()
   {
     printf("MQTTSubscribe failed.\n");
     MQTTCloseSession(&mqttClient);
-    net_disconnect(&net);
+    mqtt_net_disconnect(&net);
     return ret;
   }
 
