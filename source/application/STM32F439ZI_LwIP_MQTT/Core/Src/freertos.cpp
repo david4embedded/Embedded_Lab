@@ -72,15 +72,15 @@ void startDefaultTask(void const * argument)
 
    PARAM_NOT_USED( argument );
 
-   const osThreadDef_t subscribeTaskDef = { const_cast<char*>( "mqttSubscribeTask" ), mqttClientSubTask, osPriorityNormal, 0, configMINIMAL_STACK_SIZE, nullptr, nullptr };
-   const osThreadDef_t publishTaskDef = { const_cast<char*>( "mqttPublishTask" ), mqttClientPubTask, osPriorityNormal, 0, configMINIMAL_STACK_SIZE, nullptr, nullptr };
-
    //!< Connect to the broker
    mqttManager.connectToBroker( broker, 5000 );
 
    //!< Subscribe to the 'test' topic and register the callback
    if(  mqttManager.subscribe( "test", mqttMsgArrivedCallback ) == true )
    {
+      const osThreadDef_t subscribeTaskDef = { const_cast<char*>( "mqttSubscribeTask" ), mqttClientSubTask, osPriorityNormal, 0, configMINIMAL_STACK_SIZE, nullptr, nullptr };
+      const osThreadDef_t publishTaskDef = { const_cast<char*>( "mqttPublishTask" ), mqttClientPubTask, osPriorityNormal, 0, configMINIMAL_STACK_SIZE, nullptr, nullptr };
+
       mqttClientSubTaskHandle = osThreadCreate( &subscribeTaskDef, nullptr );
       mqttClientPubTaskHandle = osThreadCreate( &publishTaskDef, nullptr );
    }

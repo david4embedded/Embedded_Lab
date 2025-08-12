@@ -19,7 +19,7 @@
 #include "common.h"
 
 /*********************************************** Global Variables *********************************************/
-extern uint32_t g_mqttTick_ms;
+extern uint32_t g_mqttTick_ms;   //!< from mqtt_client_port.c
 
 /******************************************** Function Declarations *******************************************/
 void SystemClock_Config(void);
