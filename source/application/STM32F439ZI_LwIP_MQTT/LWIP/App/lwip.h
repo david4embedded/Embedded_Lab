@@ -41,7 +41,7 @@
 #endif /* WITH_RTOS */
 
 /* USER CODE BEGIN 0 */
-
+uint8_t LWIP_isNetworkReady(void);
 /* USER CODE END 0 */
 
 /* Global Variables ----------------------------------------------------------*/

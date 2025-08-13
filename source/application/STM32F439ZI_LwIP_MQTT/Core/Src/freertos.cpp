@@ -68,9 +68,21 @@ void MX_FREERTOS_Init(void)
  */
 void startDefaultTask(void const * argument)
 {
+   PARAM_NOT_USED( argument );
+
    MX_LWIP_Init();
 
-   PARAM_NOT_USED( argument );
+   //!< Wait until the network is ready
+   auto tickStarted = osKernelSysTick();
+   while( !LWIP_isNetworkReady() )
+   {
+      osDelay( 100 );
+      if ( osKernelSysTick() - tickStarted > 3000 )
+      {
+         LOGGING( "Network not ready after 3 seconds" );
+         return;
+      }
+   }
 
    //!< Connect to the broker
    mqttManager.connectToBroker( broker, 5000 );

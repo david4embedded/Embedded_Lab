@@ -50,7 +50,12 @@ uint8_t NETMASK_ADDRESS[4];
 uint8_t GATEWAY_ADDRESS[4];
 
 /* USER CODE BEGIN 2 */
-
+uint8_t LWIP_isNetworkReady(void)
+{
+   return ( netif_is_link_up( &gnetif ) &&
+            netif_is_up( &gnetif ) &&
+            !ip_addr_isany_val( gnetif.ip_addr ) );
+}
 /* USER CODE END 2 */
 
 /**
