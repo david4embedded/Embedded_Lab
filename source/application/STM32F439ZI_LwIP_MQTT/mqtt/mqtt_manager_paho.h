@@ -15,6 +15,8 @@
 /************************************************** Includes *************************************************/
 #include "MQTTClient.h"
 #include "mqtt_client_port.h"
+#include "lockable_FreeRTOS.hpp"
+#include "lockguard.hpp"
 #include <stdint.h>
 
 /************************************************** Types ****************************************************/
@@ -38,10 +40,11 @@ public:
    using MessageArrivedCallback = void(*)( MessageData* );
    constexpr static size_t MQTT_BUFSIZE = 1024;
 
-   MqttManagerPaho( const char* clientName, const char* userName, const char* password = nullptr )
+   MqttManagerPaho( lib::ILockable& lockable, const char* clientName, const char* userName, const char* password = nullptr )
    : m_clientName( clientName )
    , m_userName( userName )
    , m_password( password )
+   , m_lock( lockable )
    { }
 
    ~MqttManagerPaho()
@@ -77,4 +80,6 @@ private:
    uint8_t           m_recvBuffer [MQTT_BUFSIZE];  
 
    bool              m_connected{ false };
+
+   lib::ILockable    &m_lock;
 };

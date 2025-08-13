@@ -54,6 +54,14 @@ bool MqttManagerPaho::connectToBroker( const MqttBroker& broker, uint32_t timeou
       return false;
    }
 
+   if ( m_lock.initialize() != true )
+   {
+      LOGGING( "MQTT: Lock initialization failed" );
+      return false;
+   }
+
+   lib::lock_guard guard( m_lock );
+      
    m_network.socket = 0;
    m_network.mqttread = MqttManagerPaho::readFromNetwork;
    m_network.mqttwrite = MqttManagerPaho::writeToNetwork;
@@ -105,8 +113,7 @@ bool MqttManagerPaho::connectToNetwork( const MqttBroker& broker )
 	m_network.socket = socket( PF_INET, SOCK_STREAM, 0 );
 	if( m_network.socket < 0 )
 	{
-		m_network.socket = 0;
-		return false;
+      goto ERROR_EXIT;
 	}
 
 	memset( &server_addr, 0, sizeof( server_addr ) );
@@ -116,12 +123,17 @@ bool MqttManagerPaho::connectToNetwork( const MqttBroker& broker )
 
 	if( connect( m_network.socket, reinterpret_cast<struct sockaddr*>( &server_addr ), sizeof( server_addr ) ) < 0 )
 	{
-		close( m_network.socket );
-		return false;
+		goto ERROR_EXIT;
 	}
 
    LOGGING( "MQTT: Connect to the network succeeded" );
 	return true;
+
+ERROR_EXIT:
+
+   close( m_network.socket );
+   m_network.socket = 0;
+   return false;
 }
 
 /**
@@ -196,6 +208,8 @@ bool MqttManagerPaho::publish( const char* topic, const char* payload )
    message.payload = const_cast<void*>( reinterpret_cast<const void*>( payload ) );
    message.payloadlen = strlen((char*)payload);
 
+   lib::lock_guard guard( m_lock );
+
    if( MQTTPublish( &m_mqttClient, topic, &message ) != MQTT_SUCCESS )
    {
       LOGGING( "MQTT: Publish failed." );
@@ -220,6 +234,8 @@ bool MqttManagerPaho::subscribe( const char* topic, MessageArrivedCallback callb
       return false;
    }
    
+   lib::lock_guard guard( m_lock );
+
    auto result = MQTTSubscribe( &m_mqttClient, topic, QOS0, callback );
    if( result != MQTT_SUCCESS )
    {

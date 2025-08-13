@@ -30,24 +30,26 @@
 #include <string.h>
 
 /*********************************************** Local Variables *********************************************/
-static osThreadId       defaultTaskHandle;
-static osThreadId       mqttClientSubTaskHandle; 
-static osThreadId       mqttClientPubTaskHandle; 
-static MqttBroker       broker{ "192.168.1.2", 1883 };
-static MqttManagerPaho  mqttManager{ "NucleoF439", "NucleoF439" };
+static osThreadId             defaultTaskHandle;
+static osThreadId             mqttClientSubTaskHandle; 
+static osThreadId             mqttClientPubTaskHandle; 
 
-static StaticTask_t     xIdleTaskTCBBuffer;
-static StackType_t      xIdleStack[configMINIMAL_STACK_SIZE];
+static lib::LockableFreeRTOS  m_lock;
+static MqttBroker             broker{ "192.168.1.2", 1883 };
+static MqttManagerPaho        mqttManager{ m_lock, "NucleoF439", "NucleoF439" };
+
+static StaticTask_t           xIdleTaskTCBBuffer;
+static StackType_t            xIdleStack[configMINIMAL_STACK_SIZE];
 
 /******************************************** Function Declarations *******************************************/
-void  startDefaultTask           (void const * argument);
+void  startDefaultTask           ( void const *argument );
 void  mqttClientSubTask          ( void const *argument );
 void  mqttClientPubTask          ( void const *argument );
 int   mqttConnectBroker          ( );
 void  mqttMsgArrivedCallback     ( MessageData* msg );
 
 extern "C" void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer, StackType_t **ppxIdleTaskStackBuffer, uint32_t *pulIdleTaskStackSize );
-extern "C" void vApplicationStackOverflowHook(xTaskHandle xTask, signed char *pcTaskName);
+extern "C" void vApplicationStackOverflowHook( xTaskHandle xTask, signed char *pcTaskName );
 
 /******************************************** Function Definitions ********************************************/
 /**
@@ -57,7 +59,7 @@ extern "C" void vApplicationStackOverflowHook(xTaskHandle xTask, signed char *pc
  */
 void MX_FREERTOS_Init(void) 
 {
-   const osThreadDef_t defaultTaskDef = { const_cast<char*>( "defaultTask" ), startDefaultTask, osPriorityNormal, 0, 512, nullptr, nullptr };
+   const osThreadDef_t defaultTaskDef = { const_cast<char*>( "defaultTask" ), startDefaultTask, osPriorityNormal, 0, configMINIMAL_STACK_SIZE, nullptr, nullptr };
    defaultTaskHandle = osThreadCreate( &defaultTaskDef, nullptr );
 }
 
@@ -91,9 +93,9 @@ void startDefaultTask(void const * argument)
    if(  mqttManager.subscribe( "test", mqttMsgArrivedCallback ) == true )
    {
       const osThreadDef_t subscribeTaskDef = { const_cast<char*>( "mqttSubscribeTask" ), mqttClientSubTask, osPriorityNormal, 0, configMINIMAL_STACK_SIZE, nullptr, nullptr };
-      const osThreadDef_t publishTaskDef = { const_cast<char*>( "mqttPublishTask" ), mqttClientPubTask, osPriorityNormal, 0, configMINIMAL_STACK_SIZE, nullptr, nullptr };
-
       mqttClientSubTaskHandle = osThreadCreate( &subscribeTaskDef, nullptr );
+
+      const osThreadDef_t publishTaskDef = { const_cast<char*>( "mqttPublishTask" ), mqttClientPubTask, osPriorityNormal, 0, configMINIMAL_STACK_SIZE, nullptr, nullptr };
       mqttClientPubTaskHandle = osThreadCreate( &publishTaskDef, nullptr );
    }
 
@@ -192,7 +194,7 @@ void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer, StackTy
  * @param xTask a task handle
  * @param pcTaskName a pointer to the task name
  */
-void vApplicationStackOverflowHook(xTaskHandle xTask, signed char *pcTaskName)
+void vApplicationStackOverflowHook( xTaskHandle xTask, signed char *pcTaskName )
 {
    PARAM_NOT_USED( xTask );
    PARAM_NOT_USED( pcTaskName );
