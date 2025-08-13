@@ -51,12 +51,11 @@ public:
    { }
 
    bool  connectToBroker               ( const MqttBroker& broker, uint32_t timeout_ms = 5000 );
-   void  disconnect                    ( );
    bool  publish                       ( const char* topic, const char* payload );
    bool  subscribe                     ( const char* topic, MessageArrivedCallback callback );
+   void  disconnect                    ( );
 
    void  processBackgroundTask         ( );
-
    bool  isConnected                   ( ) const;
 
 protected:
