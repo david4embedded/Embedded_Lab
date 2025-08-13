@@ -1,0 +1,17 @@
+
+#pragma once
+
+#include "stm32f4xx_hal.h"
+#include "FreeRTOS.h"
+#include <stdio.h>
+
+#define USE_LOGGER
+
+#if defined (USE_LOGGER)
+#define LOGGING( format, ... ) printf( "%08ld: " format "\r\n", xTaskGetTickCount(), ##__VA_ARGS__ )
+#else 
+#define LOGGING( format, ... )
+#endif
+
+#define GET_FILE_NAME( path ) ( strrchr( path, '/') ? strrchr( path, '/' ) + 1 : path )
+#define PARAM_NOT_USED(x) (void)(x)

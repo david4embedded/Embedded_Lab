@@ -23,7 +23,7 @@
 #define ECHO_SERVER_PORT    7
 
 /**************************************** Static Variables *****************************************/
-UART_HandleTypeDef huart2;
+UART_HandleTypeDef huart3;
 osThreadId_t defaultTaskHandle;
 const osThreadAttr_t defaultTask_attributes = 
 {
@@ -37,13 +37,13 @@ static struct tcp_pcb *clientPcb;
 
 /**************************************** Local Functions ******************************************/
 static void    MX_GPIO_Init         ( );
-static void    MX_USART2_UART_Init  ( );
+static void    MX_USART3_UART_Init  ( );
 static void    SystemClock_Config   ( );
 static void    startDefaultTask     ( void *argument );
 
-static void    initTcpEchoServer   ( );
-static err_t   echoAcceptCallback  ( void *arg, struct tcp_pcb *newpcb, err_t err );
-static err_t   echoRecvCallback    ( void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err );
+static void    initTcpEchoServer    ( );
+static err_t   echoAcceptCallback   ( void *arg, struct tcp_pcb *newpcb, err_t err );
+static err_t   echoRecvCallback     ( void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err );
 
 
 /*************************************** Function Definitions **************************************/
@@ -57,7 +57,7 @@ int main(void)
    SystemClock_Config();
 
    MX_GPIO_Init();
-   MX_USART2_UART_Init();
+   MX_USART3_UART_Init();
    BSP_LED_Init( LED_RED );
    BSP_LED_Init( LED_GREEN );
    BSP_LED_Init( LED_BLUE );
@@ -151,17 +151,17 @@ static void SystemClock_Config(void)
  * @param None
  * @retval None
  */
-static void MX_USART2_UART_Init(void)
+static void MX_USART3_UART_Init(void)
 {
-   huart2.Instance = USART2;
-   huart2.Init.BaudRate = 115200;
-   huart2.Init.WordLength = UART_WORDLENGTH_8B;
-   huart2.Init.StopBits = UART_STOPBITS_1;
-   huart2.Init.Parity = UART_PARITY_NONE;
-   huart2.Init.Mode = UART_MODE_TX_RX;
-   huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-   huart2.Init.OverSampling = UART_OVERSAMPLING_16;
-   if (HAL_UART_Init(&huart2) != HAL_OK)
+   huart3.Instance = USART3;
+   huart3.Init.BaudRate = 115200;
+   huart3.Init.WordLength = UART_WORDLENGTH_8B;
+   huart3.Init.StopBits = UART_STOPBITS_1;
+   huart3.Init.Parity = UART_PARITY_NONE;
+   huart3.Init.Mode = UART_MODE_TX_RX;
+   huart3.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+   huart3.Init.OverSampling = UART_OVERSAMPLING_16;
+   if (HAL_UART_Init(&huart3) != HAL_OK)
    {
       Error_Handler();
    }
@@ -176,7 +176,7 @@ static void MX_USART2_UART_Init(void)
  */
 extern "C" int _write(int file, char *ptr, int len)
 {
-   HAL_UART_Transmit(&huart2, (uint8_t*)ptr, len, HAL_MAX_DELAY);
+   HAL_UART_Transmit(&huart3, (uint8_t*)ptr, len, HAL_MAX_DELAY);
 }
 
 /**

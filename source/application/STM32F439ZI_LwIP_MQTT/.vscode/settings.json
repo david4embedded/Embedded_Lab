@@ -1,0 +1,12 @@
+{
+   "cmake.configureOnOpen": true,
+   "files.associations": {
+      ".fantomasignore": "ignore",
+      "main.h": "c",
+      "mqttinterface.h": "c",
+      "freertos.h": "c",
+      "freertosconfig.h": "c",
+      "portable.h": "c",
+      "typeinfo": "cpp"
+   }
+}
