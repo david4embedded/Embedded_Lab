@@ -42,11 +42,11 @@ static StaticTask_t           xIdleTaskTCBBuffer;
 static StackType_t            xIdleStack[configMINIMAL_STACK_SIZE];
 
 /******************************************** Function Declarations *******************************************/
-void  startDefaultTask           ( void const *argument );
-void  mqttClientSubTask          ( void const *argument );
-void  mqttClientPubTask          ( void const *argument );
-int   mqttConnectBroker          ( );
-void  mqttMsgArrivedCallback     ( MessageData* msg );
+void  startDefaultTask        ( void const *argument );
+void  mqttClientSubTask       ( void const *argument );
+void  mqttClientPubTask       ( void const *argument );
+int   mqttConnectBroker       ( );
+void  mqttMsgArrivedCallback  ( MessageData* msg );
 
 extern "C" void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer, StackType_t **ppxIdleTaskStackBuffer, uint32_t *pulIdleTaskStackSize );
 extern "C" void vApplicationStackOverflowHook( xTaskHandle xTask, signed char *pcTaskName );
