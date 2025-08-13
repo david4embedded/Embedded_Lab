@@ -74,17 +74,19 @@ void startDefaultTask(void const * argument)
 
    MX_LWIP_Init();
 
-   //!< Wait until the network is ready
+   /* NOTE: Wait until the network is ready. Note that this currently requires an additional delay as seen at the end to better ensure
+    *       stability in the connection process. */
    auto tickStarted = osKernelSysTick();
    while( !LWIP_isNetworkReady() )
    {
       osDelay( 100 );
-      if ( osKernelSysTick() - tickStarted > 3000 )
+      if ( osKernelSysTick() - tickStarted > 5000 )
       {
-         LOGGING( "Network not ready after 3 seconds" );
+         LOGGING( "Network not ready after 5 seconds" );
          return;
       }
    }
+   osDelay( 1000 );
 
    //!< Connect to the broker
    mqttManager.connectToBroker( broker, 5000 );
