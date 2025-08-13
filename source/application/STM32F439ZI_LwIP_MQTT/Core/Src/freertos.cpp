@@ -86,7 +86,7 @@ void startDefaultTask(void const * argument)
          return;
       }
    }
-   osDelay( 1000 );
+   osDelay( 2000 );
 
    //!< Connect to the broker
    mqttManager.connectToBroker( broker, 5000 );
