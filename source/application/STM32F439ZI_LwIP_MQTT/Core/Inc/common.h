@@ -13,4 +13,5 @@
 #define LOGGING( format, ... )
 #endif
 
+#define GET_FILE_NAME( path ) ( strrchr( path, '/') ? strrchr( path, '/' ) + 1 : path )
 #define PARAM_NOT_USED(x) (void)(x)
