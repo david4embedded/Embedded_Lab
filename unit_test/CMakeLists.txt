@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.14)
 project(unit_testing)
 
 # Apply C++20 standard to all test projects.
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Add a global compile definition for unit testing.
@@ -29,3 +29,4 @@ FetchContent_MakeAvailable(googletest)
 # This command processes the CMakeLists.txt file in the message_passer subdirectory.
 add_subdirectory(message_passer)
 add_subdirectory(ring_buffer)
+add_subdirectory(cli)
