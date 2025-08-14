@@ -26,7 +26,7 @@ void CLI::addCommand( const char* command, CommandFunction function )
 void CLI::processInput( char* input )
 {
    char* argv[MAX_ARGS];
-   auto argc = parseInput(input, argv);
+   auto argc = parseInput( input, argv );
 
    if (argc == 0)
    {
