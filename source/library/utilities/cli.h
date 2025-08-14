@@ -20,8 +20,8 @@ public:
       const char* commandName;
       CommandFunction function;
    } ;
-   
-   CLI();
+
+   CLI( char buffer[], uint32_t sizeBuffer );
    ~CLI() = default;
 
    // 명령어 등록
@@ -32,6 +32,7 @@ public:
 
    // 파싱 로직
    int parseInput( char* input, char* argv[] );
+   int parseInput2( char* input, char* argv[], int maxArgs );
 
    void putCharIntoBuffer( char c );
 
@@ -39,7 +40,7 @@ private:
    CommandEntry  m_commandTable[MAX_COMMANDS];
    int           m_commandCount{ 0 };
 
-   lib::RingBuffer<char, BUFFER_SIZE> m_ringBuffer;
+   lib::RingBuffer<char> m_ringBuffer;
 };
 
 };

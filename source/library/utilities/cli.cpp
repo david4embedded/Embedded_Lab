@@ -1,12 +1,13 @@
 
 #include "cli.h"
+#include <string.h>
 
 namespace lib
 {   
-CLI::CLI()
+CLI::CLI( char buffer[], uint32_t sizeBuffer )
+ : m_ringBuffer( buffer, sizeBuffer )
 {
    memset( m_commandTable, 0, sizeof( m_commandTable ) );
-   memset( m_buffer, 0, sizeof( m_buffer ) );
 }
 
 // 명령어 등록
@@ -56,6 +57,58 @@ int CLI::parseInput( char* input, char* argv[] )
       argv[argc++] = token;
       token = strtok(NULL, " ");
    }
+   return argc;
+}
+int CLI::parseInput2( char* input, char* argv[], int maxArgs )
+{
+   int argc = 0;
+
+   // Find the first space to separate the command
+   auto *token = strchr(input, ' ');
+   if (token == nullptr)
+   {
+      // No space found, the entire input is the command
+      argv[argc++] = input;
+      return argc;
+   }
+
+   // Null-terminate the command
+   *token = '\0';
+   argv[argc++] = input;
+
+   // Move past the first token
+   input = token + 1;
+
+   // Parse the rest of the arguments
+   while (*input != '\0' && argc < maxArgs)
+   {
+      // Skip leading spaces
+      while (*input == ' ')
+      {
+         input++;
+      }
+
+      if (*input == '\0')
+      {
+         break;
+      }
+
+      // Find the next space
+      token = strchr(input, ' ');
+
+      if (token == nullptr)
+      {
+         // Last argument
+         argv[argc++] = input;
+         break;
+      }
+
+      // Null-terminate the argument
+      *token = '\0';
+      argv[argc++] = input;
+      input = token + 1;
+   }
+
    return argc;
 }
 
