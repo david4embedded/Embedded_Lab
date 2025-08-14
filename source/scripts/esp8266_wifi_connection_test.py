@@ -3,10 +3,6 @@ import time
 import argparse
 
 # --- 설정값 ---
-# ESP8266이 연결된 시리얼 포트
-# Windows: 'COM3', macOS/Linux: '/dev/ttyUSB0' 등
-SERIAL_PORT = 'COM12' 
-
 # AT 펌웨어 기본 통신 속도
 BAUD_RATE = 115200
 
@@ -28,10 +24,12 @@ def main():
    parser = argparse.ArgumentParser(description="Connect to Wi-Fi using ESP8266.")
    parser.add_argument("ssid", help="Wi-Fi SSID")
    parser.add_argument("password", help="Wi-Fi Password")
+   parser.add_argument("port", help="Serial Port")
    args = parser.parse_args()
 
    wifi_ssid = args.ssid
    wifi_password = args.password
+   SERIAL_PORT = args.port
 
    try:
       # 시리얼 포트 열기
