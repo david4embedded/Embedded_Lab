@@ -1,3 +1,18 @@
+#-------------------------------------------------------------------------------
+# Name:        esp8266_wifi_connection_test
+# Purpose:     Connects to a Wi-Fi network using an ESP8266 module.
+# Details:     This script connects to a specified Wi-Fi network using an ESP8266 module
+#              connected via a serial port. It takes the serial port, Wi-Fi SSID, and
+#              Wi-Fi password as command-line arguments.
+#
+# Usage:       python esp8266_wifi_connection_test.py <port> <ssid> <password>
+#
+# Author:      Sungsu Kim
+#
+# Created:     2025-08-14
+# Copyright:   (c) Sungsu Kim 2025
+#-------------------------------------------------------------------------------
+   
 import serial
 import time
 import argparse
