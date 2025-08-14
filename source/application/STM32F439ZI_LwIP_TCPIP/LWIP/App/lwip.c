@@ -46,11 +46,9 @@ struct netif gnetif;
 ip4_addr_t ipaddr;
 ip4_addr_t netmask;
 ip4_addr_t gw;
-
-/* USER CODE BEGIN OS_THREAD_ATTR_CMSIS_RTOS_V2 */
-#define INTERFACE_THREAD_STACK_SIZE ( 1024 )
-osThreadAttr_t attributes;
-/* USER CODE END OS_THREAD_ATTR_CMSIS_RTOS_V2 */
+uint8_t IP_ADDRESS[4];
+uint8_t NETMASK_ADDRESS[4];
+uint8_t GATEWAY_ADDRESS[4];
 
 /* USER CODE BEGIN 2 */
 
@@ -61,13 +59,30 @@ osThreadAttr_t attributes;
   */
 void MX_LWIP_Init(void)
 {
+  /* IP addresses initialization */
+  IP_ADDRESS[0] = 192;
+  IP_ADDRESS[1] = 168;
+  IP_ADDRESS[2] = 1;
+  IP_ADDRESS[3] = 3;
+  NETMASK_ADDRESS[0] = 255;
+  NETMASK_ADDRESS[1] = 255;
+  NETMASK_ADDRESS[2] = 255;
+  NETMASK_ADDRESS[3] = 0;
+  GATEWAY_ADDRESS[0] = 0;
+  GATEWAY_ADDRESS[1] = 0;
+  GATEWAY_ADDRESS[2] = 0;
+  GATEWAY_ADDRESS[3] = 0;
+
+/* USER CODE BEGIN IP_ADDRESSES */
+/* USER CODE END IP_ADDRESSES */
+
   /* Initialize the LwIP stack with RTOS */
   tcpip_init( NULL, NULL );
 
   /* IP addresses initialization without DHCP (IPv4) */
-  IP4_ADDR(&ipaddr, 192, 168, 1, 3 );
-  IP4_ADDR(&netmask, 255, 255, 255, 0 );
-  IP4_ADDR(&gw, 0, 0, 0, 0);
+  IP4_ADDR(&ipaddr, IP_ADDRESS[0], IP_ADDRESS[1], IP_ADDRESS[2], IP_ADDRESS[3]);
+  IP4_ADDR(&netmask, NETMASK_ADDRESS[0], NETMASK_ADDRESS[1] , NETMASK_ADDRESS[2], NETMASK_ADDRESS[3]);
+  IP4_ADDR(&gw, GATEWAY_ADDRESS[0], GATEWAY_ADDRESS[1], GATEWAY_ADDRESS[2], GATEWAY_ADDRESS[3]);
 
   /* add the network interface (IPv4/IPv6) with RTOS */
   netif_add(&gnetif, &ipaddr, &netmask, &gw, NULL, &ethernetif_init, &tcpip_input);
@@ -82,13 +97,10 @@ void MX_LWIP_Init(void)
   netif_set_link_callback(&gnetif, ethernet_link_status_updated);
 
   /* Create the Ethernet link handler thread */
-/* USER CODE BEGIN H7_OS_THREAD_NEW_CMSIS_RTOS_V2 */
-  memset(&attributes, 0x0, sizeof(osThreadAttr_t));
-  attributes.name = "EthLink";
-  attributes.stack_size = INTERFACE_THREAD_STACK_SIZE;
-  attributes.priority = osPriorityBelowNormal;
-  osThreadNew(ethernet_link_thread, &gnetif, &attributes);
-/* USER CODE END H7_OS_THREAD_NEW_CMSIS_RTOS_V2 */
+/* USER CODE BEGIN H7_OS_THREAD_DEF_CREATE_CMSIS_RTOS_V1 */
+  osThreadDef(EthLink, ethernet_link_thread, osPriorityBelowNormal, 0, configMINIMAL_STACK_SIZE *2);
+  osThreadCreate (osThread(EthLink), &gnetif);
+/* USER CODE END H7_OS_THREAD_DEF_CREATE_CMSIS_RTOS_V1 */
 
 /* USER CODE BEGIN 3 */
 
@@ -111,11 +123,15 @@ static void ethernet_link_status_updated(struct netif *netif)
 {
   if (netif_is_up(netif))
   {
-    BSP_LED_On( LED_GREEN );
+/* USER CODE BEGIN 5 */
+   BSP_LED_On( LED_GREEN );
+/* USER CODE END 5 */
   }
   else /* netif is down */
   {
-    BSP_LED_Off( LED_GREEN );
+/* USER CODE BEGIN 6 */
+   BSP_LED_Off( LED_GREEN );
+/* USER CODE END 6 */
   }
 }
 

@@ -16,19 +16,20 @@ target_compile_definitions(stm32cubemx INTERFACE
 
 target_include_directories(stm32cubemx INTERFACE
     ../../Core/Inc
+    ../../Drivers/STM32F4xx_HAL_Driver/Inc
+    ../../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy
+    ../../Drivers/BSP/Components/lan8742
+    ../../Drivers/BSP/STM32F4xx_Nucleo_144
+    ../../Drivers/CMSIS/Device/ST/STM32F4xx/Include
+    ../../Drivers/CMSIS/Include
     ../../LWIP/App
     ../../LWIP/Target
     ../../Middlewares/Third_Party/LwIP/src/include
     ../../Middlewares/Third_Party/LwIP/system
-    ../../Drivers/STM32F4xx_HAL_Driver/Inc
-    ../../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy
     ../../Middlewares/Third_Party/FreeRTOS/Source/include
-    ../../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2
+    ../../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS
     ../../Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F
-    ../../Drivers/BSP/Components/lan8742
-    ../../Drivers/BSP/STM32F4xx_Nucleo_144
     ../../Middlewares/Third_Party/LwIP/src/include/netif/ppp
-    ../../Drivers/CMSIS/Device/ST/STM32F4xx/Include
     ../../Middlewares/Third_Party/LwIP/src/include/lwip
     ../../Middlewares/Third_Party/LwIP/src/include/lwip/apps
     ../../Middlewares/Third_Party/LwIP/src/include/lwip/priv
@@ -40,15 +41,20 @@ target_include_directories(stm32cubemx INTERFACE
     ../../Middlewares/Third_Party/LwIP/src/include/compat/posix/sys
     ../../Middlewares/Third_Party/LwIP/src/include/compat/stdc
     ../../Middlewares/Third_Party/LwIP/system/arch
-    ../../Drivers/CMSIS/Include
 )
 
 target_sources(stm32cubemx INTERFACE
+    ../../startup_stm32f439xx.s    
     ../../Core/Src/main.cpp
-    ../../Core/Src/freertos.c
+    ../../Core/Src/freertos.cpp
+    ../../Core/Src/gpio.c
+    ../../Core/Src/usart.c
     ../../Core/Src/stm32f4xx_it.c
     ../../Core/Src/stm32f4xx_hal_msp.c
     ../../Core/Src/stm32f4xx_hal_timebase_tim.c
+    ../../Core/Src/system_stm32f4xx.c
+    ../../Core/Src/sysmem.c
+    ../../Core/Src/syscalls.c
     ../../LWIP/Target/ethernetif.c
     ../../LWIP/App/lwip.c
     ../../Drivers/BSP/Components/lan8742/lan8742.c
@@ -71,7 +77,6 @@ target_sources(stm32cubemx INTERFACE
     ../../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim.c
     ../../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim_ex.c
     ../../Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_uart.c
-    ../../Core/Src/system_stm32f4xx.c
     ../../Middlewares/Third_Party/FreeRTOS/Source/croutine.c
     ../../Middlewares/Third_Party/FreeRTOS/Source/event_groups.c
     ../../Middlewares/Third_Party/FreeRTOS/Source/list.c
@@ -79,7 +84,7 @@ target_sources(stm32cubemx INTERFACE
     ../../Middlewares/Third_Party/FreeRTOS/Source/stream_buffer.c
     ../../Middlewares/Third_Party/FreeRTOS/Source/tasks.c
     ../../Middlewares/Third_Party/FreeRTOS/Source/timers.c
-    ../../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.c
+    ../../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.c
     ../../Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.c
     ../../Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F/port.c
     ../../Middlewares/Third_Party/LwIP/src/netif/ppp/auth.c
@@ -163,9 +168,6 @@ target_sources(stm32cubemx INTERFACE
     ../../Middlewares/Third_Party/LwIP/src/core/ipv6/nd6.c
     ../../Middlewares/Third_Party/LwIP/system/OS/sys_arch.c
     ../../Middlewares/Third_Party/LwIP/src/apps/mqtt/mqtt.c
-    ../../Core/Src/sysmem.c
-    ../../Core/Src/syscalls.c
-    ../../startup_stm32f439xx.s
 )
 
 target_link_directories(stm32cubemx INTERFACE
