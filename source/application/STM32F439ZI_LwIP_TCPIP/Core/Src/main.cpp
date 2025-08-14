@@ -16,7 +16,7 @@
 #include "gpio.h"
 
 /**************************************** External Functions ***************************************/
-extern "C" void MX_FREERTOS_Init ( );
+extern void MX_FREERTOS_Init     ( );
 
 /**************************************** Local Functions ******************************************/
 static void SystemClock_Config   ( );
