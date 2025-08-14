@@ -48,29 +48,25 @@ def main():
 
    try:
       # Open the serial port
-      print(f"Opening {SERIAL_PORT} port...")
       ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=5)
-      print("COM port opened successfully.")
+      print(f"{SERIAL_PORT} opened successfully.")
       
       # Wait briefly before sending AT commands
       time.sleep(2)
       
       # 1. Test AT command
-      print("Testing an AT command...")
       response = send_at_command(ser, b'AT')
       if b'OK' not in response:
          print("ERROR: ESP8266 not responding to AT command.")
          return
 
       # 2. Set Wi-Fi mode (station mode)
-      print("Setting Wi-Fi mode to station...")
       response = send_at_command(ser, b'AT+CWMODE=1')
       if b'OK' not in response:
          print("ERROR: Failed to set Wi-Fi mode.")
          return
          
       # 3. Connect to Wi-Fi
-      print(f"Connecting to Wi-Fi SSID...")
       join_command = f'AT+CWJAP="{wifi_ssid}","{wifi_password}"'.encode('utf-8')
       response = send_at_command(ser, join_command, timeout=10)
       
@@ -81,7 +77,6 @@ def main():
          return
 
       # 4. Check assigned IP address
-      print("Checking assigned IP address...")
       response = send_at_command(ser, b'AT+CIFSR')
       
    except serial.SerialException as e:
