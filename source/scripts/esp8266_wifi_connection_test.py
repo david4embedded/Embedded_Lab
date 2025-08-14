@@ -22,14 +22,14 @@ def send_at_command(ser, command, timeout=1):
 
 def main():
    parser = argparse.ArgumentParser(description="Connect to Wi-Fi using ESP8266.")
+   parser.add_argument("port", help="Serial Port")
    parser.add_argument("ssid", help="Wi-Fi SSID")
    parser.add_argument("password", help="Wi-Fi Password")
-   parser.add_argument("port", help="Serial Port")
    args = parser.parse_args()
 
+   SERIAL_PORT = args.port
    wifi_ssid = args.ssid
    wifi_password = args.password
-   SERIAL_PORT = args.port
 
    try:
       # 시리얼 포트 열기
