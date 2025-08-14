@@ -7,9 +7,9 @@
 
 ## 2. Project Setup
 * The firmware project requires these tools or higher versions on each to be installed in advance:
-  - STM32CubeIDE_1.5.0 or later
+  - STM32CubeIDE_1.19.0 or later
   - STM32CubeCLT_1.15.1 or later (for debugging through VS Code)
-  - STM32CubeMX6.11 or later (not mandatory unless having to change the driver configuration)
+  - STM32CubeMX6.15 or later (not mandatory unless having to change the driver configuration)
   - VS Code with extensions:
    . STM32
    . CMake
@@ -24,9 +24,7 @@
 * The firmware supports TCP/IP echo server.
    - The server's address is fixed to 192.168.1.3 with no gateway option, i.e., direct ethernet connection to a client.
    - when a client sneds a message to the server, the server echoes the message to the client back.
-* For serial logging, connect the UART cables to Nucleo's ports referring to this informatoin
-   - UART2_RX: PA3
-   - USART2_TX: PD5
+* The firmware also supports the serial debugging using ST-LINK's virtual COM port; simply open a proper COM port while a USB cable is connected between the Nucleo and the laptop.
 * Currently LEDs on the nucleo board are used:
    - LD1 (Green): indicates the ethernet link status (Green when on)
    - LD2 (Blue): toggled every 1sec while the default thread is running
