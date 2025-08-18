@@ -44,7 +44,9 @@ target_include_directories(stm32cubemx INTERFACE
     ../../Middlewares/Third_Party/LwIP/system/arch
     ../../Middlewares/Third_Party/paho.mqtt
     ../../Middlewares/Third_Party/paho.mqtt/MQTTPacket
-    ../../mqtt    
+    ../../../../library
+    ../../../../library/RTOS
+    ../../mqtt
 )
 
 target_sources(stm32cubemx INTERFACE
