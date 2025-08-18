@@ -41,7 +41,9 @@ target_include_directories(stm32cubemx INTERFACE
     ../../Middlewares/Third_Party/LwIP/src/include/compat/posix/sys
     ../../Middlewares/Third_Party/LwIP/src/include/compat/stdc
     ../../Middlewares/Third_Party/LwIP/system/arch
+    ../../../../library
     ../../../../library/utilities
+
 )
 
 target_sources(stm32cubemx INTERFACE
