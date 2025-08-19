@@ -53,7 +53,7 @@ bool IsNewUartRxData();
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+extern void putCharIntoBuffer( char c );
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
@@ -175,7 +175,7 @@ void USART3_IRQHandler(void)
   /* USER CODE BEGIN USART3_IRQn 1 */
   if ( IsNewUartRxData() )
   {
-    uint8_t data = (uint8_t)(huart3.Instance->DR);
+    putCharIntoBuffer( (uint8_t)(huart3.Instance->DR) );
   }
   /* USER CODE END USART3_IRQn 1 */
 }
