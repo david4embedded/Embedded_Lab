@@ -67,6 +67,18 @@ public:
    /**
     * @inheritDoc
     */
+   void putISR( ) override
+   {
+      if ( m_semaphore == nullptr )
+      {
+         return;
+      }
+      xSemaphoreGiveFromISR( m_semaphore, nullptr );
+   }
+
+   /**
+    * @inheritDoc
+    */
    ErrorCode get( uint32_t timeout_ms ) override
    {
       if ( m_semaphore == nullptr )
