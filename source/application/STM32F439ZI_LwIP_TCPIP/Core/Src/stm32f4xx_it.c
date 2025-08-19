@@ -175,7 +175,7 @@ void USART3_IRQHandler(void)
   /* USER CODE BEGIN USART3_IRQn 1 */
   if ( IsNewUartRxData() )
   {
-    putCharIntoBuffer( (uint8_t)(huart3.Instance->DR) );
+    CLI_putCharIntoBuffer( (uint8_t)(huart3.Instance->DR) );
   }
   /* USER CODE END USART3_IRQn 1 */
 }

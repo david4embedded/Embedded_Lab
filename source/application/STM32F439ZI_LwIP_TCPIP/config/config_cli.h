@@ -5,7 +5,7 @@
 extern "C" {
 #endif
 
-void putCharIntoBuffer( char c );
+void CLI_putCharIntoBuffer( char c );
 
 #if defined (__cplusplus)
 }

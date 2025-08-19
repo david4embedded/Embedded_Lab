@@ -4,7 +4,7 @@
 #include "semaphore_FreeRTOS.h"
 #include "common.h"
 
-void commandTest1( int argc, char* argv[] );
+static void commandTest1( int argc, char* argv[] );
 
 lib::CLI::CommandEntry cliCommands[] = 
 {
@@ -22,13 +22,13 @@ CLI& CLI::getInstance()
 }
 }
 
-void putCharIntoBuffer( char c )
+void CLI_putCharIntoBuffer( char c )
 {
    auto& cli = lib::CLI::getInstance();
    cli.putCharIntoBuffer(c);
 }
 
-void commandTest1( int argc, char* argv[] )
+static void commandTest1( int argc, char* argv[] )
 {
    LOGGING( "CLI: 'test1' command executed" );
 
