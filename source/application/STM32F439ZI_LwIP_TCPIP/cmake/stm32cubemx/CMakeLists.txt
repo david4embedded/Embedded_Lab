@@ -44,7 +44,7 @@ target_include_directories(stm32cubemx INTERFACE
     ../../../../library
     ../../../../library/RTOS
     ../../../../library/utilities
-
+    ../../config
 )
 
 target_sources(stm32cubemx INTERFACE
@@ -173,6 +173,7 @@ target_sources(stm32cubemx INTERFACE
     ../../Middlewares/Third_Party/LwIP/system/OS/sys_arch.c
     ../../Middlewares/Third_Party/LwIP/src/apps/mqtt/mqtt.c
     ../../../../library/utilities/cli.cpp
+    ../../config/config_cli.cpp
 )
 
 target_link_directories(stm32cubemx INTERFACE

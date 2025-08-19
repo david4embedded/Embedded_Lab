@@ -1,25 +1,9 @@
 
 #include "cli.h"
-#include "semaphore_FreeRTOS.h"
 #include <string.h>
 
 namespace lib
 {   
-
-CLI& CLI::getInstance()
-{
-   static char buffer[128];
-   static lib::Semaphore_FreeRTOS semaphoreCli;
-   static lib::CLI instance{ buffer, sizeof(buffer), '\r', semaphoreCli };
-   return instance; 
-}
-
-extern "C" void putCharIntoBuffer( char c )
-{
-   auto& cli = lib::CLI::getInstance();
-   cli.putCharIntoBuffer(c);
-}
-
 CLI::CLI( char buffer[], uint32_t sizeBuffer, char delimiter, lib::ISemaphore& semaphore )
  : m_ringBuffer( buffer, sizeBuffer )
  , m_delimiter( delimiter )

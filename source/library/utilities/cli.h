@@ -29,8 +29,7 @@ public:
 
    ~CLI() = default;
 
-   //!< Singleton instance accessor
-   static CLI&    getInstance          ( );
+   static CLI&    getInstance          ( );        //!< Singleton instance accessor. The implementation should be in a configuration file, e.g., config_cli.cpp.
 
    ErrorCode      initialize           ( );
    ErrorCode      addCommand           ( const char* command, CommandFunction function );

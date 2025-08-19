@@ -23,6 +23,7 @@
 #include "stm32f4xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "config_cli.h"
 #include <stdbool.h>
 /* USER CODE END Includes */
 
@@ -53,7 +54,6 @@ bool IsNewUartRxData();
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-extern void putCharIntoBuffer( char c );
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
