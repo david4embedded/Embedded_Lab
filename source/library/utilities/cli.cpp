@@ -4,12 +4,14 @@
 
 namespace lib
 {   
-CLI::CLI( char buffer[], uint32_t sizeBuffer, char delimiter, lib::ISemaphore& semaphore )
+CLI::CLI( char buffer[], uint32_t sizeBuffer, char delimiter, CommandEntry commands[], size_t numCommands, lib::ISemaphore& semaphore )
  : m_ringBuffer( buffer, sizeBuffer )
  , m_delimiter( delimiter )
+ , m_commandTable( commands )
+ , m_numCommands( numCommands )
  , m_semaphore( semaphore )
 {
-   memset( m_commandTable, 0, sizeof( m_commandTable ) );
+
 }
 
 ErrorCode CLI::initialize( )
@@ -18,34 +20,6 @@ ErrorCode CLI::initialize( )
    if ( result != LibErrorCodes::eOK )
    {
       return result;
-   }
-
-   return LibErrorCodes::eOK;
-}
-
-ErrorCode CLI::addCommand( const char* command, CommandFunction function )
-{
-   if ( m_commandCount > MAX_COMMANDS )
-   {
-      return LibErrorCodes::eCLI_TOO_MANY_COMMANDS;
-   }
-
-   m_commandTable[m_commandCount].commandName = command;
-   m_commandTable[m_commandCount].function = function;
-   m_commandCount++;
-
-   return LibErrorCodes::eOK;
-}
-
-ErrorCode CLI::addCommands( CommandEntry* commands, uint32_t numCommands )
-{
-   for ( uint32_t i = 0; i < numCommands; i++ )
-   {
-      const auto result = addCommand( commands[i].commandName, commands[i].function );
-      if ( result != LibErrorCodes::eOK )
-      {
-         return result;
-      }
    }
 
    return LibErrorCodes::eOK;
@@ -83,7 +57,7 @@ void CLI::processInput( char* input )
 
    char* command = argv[0];
 
-   for ( unsigned i = 0; i < m_commandCount; i++ )
+   for ( unsigned i = 0; i < m_numCommands; i++ )
    {
       if ( strcmp( m_commandTable[i].commandName, command ) == 0 )
       {

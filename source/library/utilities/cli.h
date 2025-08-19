@@ -1,10 +1,11 @@
 
 #pragma once
 
-#include <stdint.h>
 #include "ring_buffer.h"
 #include "ISemaphore.h"
 #include "error_codes_lib.h"
+#include <stdint.h>
+#include <stddef.h>
 
 namespace lib
 {
@@ -32,8 +33,6 @@ public:
    static CLI&    getInstance          ( );        //!< Singleton instance accessor. The implementation should be in a configuration file, e.g., config_cli.cpp.
 
    ErrorCode      initialize           ( );
-   ErrorCode      addCommand           ( const char* command, CommandFunction function );
-   ErrorCode      addCommands          ( CommandEntry* commands, uint32_t numCommands );
    ErrorCode      getNewCommandLine    ( char* buffer, uint32_t sizeBuffer, uint32_t timeout_ms = 3000 );
    void           processInput         ( char* input );
    int            tokenize             ( char* input, char* argv[], int maxArgs );
@@ -47,13 +46,13 @@ public:
 
 private:
    //!< Constructor
-   CLI( char buffer[], uint32_t sizeBuffer, char delimiter, lib::ISemaphore& semaphore );
-
-   const char     m_delimiter;                     //!< A config. parameter to decide a new command line
-   CommandEntry   m_commandTable[MAX_COMMANDS];
-   int            m_commandCount{ 0 };
+   CLI( char buffer[], uint32_t sizeBuffer, char delimiter, CommandEntry commands[], size_t numCommands, lib::ISemaphore& semaphore );
 
    lib::RingBuffer<char>   m_ringBuffer;           //!< buffer to hold all the incoming characters
+   const char              m_delimiter;            //!< A config. parameter to decide a new command line
+   const CommandEntry     *m_commandTable;
+   const size_t            m_numCommands{ 0 };
+   
    lib::ISemaphore&        m_semaphore;            //!< to signal there's a new command line
 };
 
