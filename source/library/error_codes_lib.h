@@ -42,5 +42,7 @@ enum LibErrorCodes
    eSEMAPHORE_INIT_FAILED          = ( eLIBRARY | 0x00000004 ),
    eSEMAPHORE_NOT_INITIALIZED      = ( eLIBRARY | 0x00000005 ),
    eSEMAPHORE_GET_TIME_OUT         = ( eLIBRARY | 0x00000006 ),
+   eCLI_NO_COMMAND                 = ( eLIBRARY | 0x00000007 ),
+   eCLI_TOO_MANY_COMMANDS          = ( eLIBRARY | 0x00000008 ),
 };
 

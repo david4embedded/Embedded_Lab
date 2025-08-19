@@ -1,33 +1,77 @@
 
 #include "cli.h"
+#include "semaphore_FreeRTOS.h"
 #include <string.h>
 
 namespace lib
 {   
-CLI::CLI( char buffer[], uint32_t sizeBuffer, char delimiter )
+
+CLI& CLI::getInstance()
+{
+   static char buffer[128];
+   static lib::Semaphore_FreeRTOS semaphoreCli;
+   static lib::CLI instance{ buffer, sizeof(buffer), '\r', semaphoreCli };
+   return instance; 
+}
+
+extern "C" void putCharIntoBuffer( char c )
+{
+   auto& cli = lib::CLI::getInstance();
+   cli.putCharIntoBuffer(c);
+}
+
+CLI::CLI( char buffer[], uint32_t sizeBuffer, char delimiter, lib::ISemaphore& semaphore )
  : m_ringBuffer( buffer, sizeBuffer )
  , m_delimiter( delimiter )
+ , m_semaphore( semaphore )
 {
    memset( m_commandTable, 0, sizeof( m_commandTable ) );
 }
 
-void CLI::addCommand( const char* command, CommandFunction function )
+ErrorCode CLI::initialize( )
+{
+   auto result = m_semaphore.initialize( 1, 0 );
+   if ( result != LibErrorCodes::eOK )
+   {
+      return result;
+   }
+
+   return LibErrorCodes::eOK;
+}
+
+ErrorCode CLI::addCommand( const char* command, CommandFunction function )
 {
    if ( m_commandCount > MAX_COMMANDS )
    {
-      return;
+      return LibErrorCodes::eCLI_TOO_MANY_COMMANDS;
    }
 
    m_commandTable[m_commandCount].commandName = command;
    m_commandTable[m_commandCount].function = function;
    m_commandCount++;
+
+   return LibErrorCodes::eOK;
 }
 
-void CLI::getNewCommandLine( char* buffer, uint32_t sizeBuffer )
+ErrorCode CLI::addCommands( CommandEntry* commands, uint32_t numCommands )
 {
-   if ( m_newCommandLines == 0 )
+   for ( uint32_t i = 0; i < numCommands; i++ )
    {
-      return;
+      const auto result = addCommand( commands[i].commandName, commands[i].function );
+      if ( result != LibErrorCodes::eOK )
+      {
+         return result;
+      }
+   }
+
+   return LibErrorCodes::eOK;
+}
+
+ErrorCode CLI::getNewCommandLine( char* buffer, uint32_t sizeBuffer, uint32_t timeout_ms /* = 3000 */ )
+{
+   if ( m_semaphore.get( timeout_ms ) != LibErrorCodes::eOK )
+   {
+      return LibErrorCodes::eCLI_NO_COMMAND;
    }
 
    char oneChar;
@@ -37,17 +81,17 @@ void CLI::getNewCommandLine( char* buffer, uint32_t sizeBuffer )
       *buffer++ = oneChar;
       if ( oneChar == m_delimiter )
       {
-         m_newCommandLines--;
          break;
       }
    }
+
+   return LibErrorCodes::eOK;
 }
 
 void CLI::processInput( char* input )
 {
    char* argv[MAX_ARGS];
-   auto argc = tokenize( input, argv, MAX_ARGS );
-
+   const auto argc = tokenize( input, argv, MAX_ARGS );
    if (argc == 0)
    {
       return;
@@ -110,7 +154,7 @@ void CLI::putCharIntoBuffer( char c )
    auto result = m_ringBuffer.push(c);
    if ( ( result == LibErrorCodes::eOK ) && ( c == m_delimiter ) )
    {
-      m_newCommandLines++;
+      m_semaphore.putISR();
    }
 }
 }
