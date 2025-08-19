@@ -209,6 +209,11 @@ void ETH_IRQHandler(void)
 }
 
 /* USER CODE BEGIN 1 */
+/**
+ * @brief Check if new UART RX data is available.
+ * 
+ * @return true if new data is available, false otherwise.
+ */
 bool IsNewUartRxData()
 {
    UART_HandleTypeDef *huart = &huart3;
