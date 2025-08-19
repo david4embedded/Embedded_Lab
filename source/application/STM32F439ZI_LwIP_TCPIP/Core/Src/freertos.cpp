@@ -25,6 +25,7 @@
 #include "lwip.h"
 #include "lwip/tcp.h"
 #include "stm32f4xx_nucleo_144.h"
+#include "cli.h"
 
 /************************************************** Consts ****************************************************/
 #define ECHO_SERVER_ADDR_0    192
@@ -33,10 +34,13 @@
 #define ECHO_SERVER_ADDR_3    3
 #define ECHO_SERVER_PORT      7
 
+constexpr size_t CLI_BUFFER_SIZE = 128;
+
 /*********************************************** Local Variables **********************************************/
 static struct tcp_pcb   *echoServerPcb;
 static struct tcp_pcb   *clientPcb;
 static osThreadId       defaultTaskHandle;
+static osThreadId       cliTaskHandle;
 
 static StaticTask_t     xIdleTaskTCBBuffer;
 static StackType_t      xIdleStack[configMINIMAL_STACK_SIZE];
@@ -44,6 +48,7 @@ static StackType_t      xIdleStack[configMINIMAL_STACK_SIZE];
 /******************************************** Function Declarations *******************************************/
 void           MX_FREERTOS_Init     ( );
 static void    startDefaultTask     ( void const * argument );
+static void    startCliTask         ( void const * argument );
 
 static void    initTcpEchoServer    ( );
 static err_t   echoAcceptCallback   ( void *arg, struct tcp_pcb *newpcb, err_t err );
@@ -62,6 +67,9 @@ void MX_FREERTOS_Init(void)
 {
    osThreadDef(defaultTask, startDefaultTask, osPriorityNormal, 0, 512);
    defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
+
+   osThreadDef(cliTask, startCliTask, osPriorityNormal, 0, 512);
+   cliTaskHandle = osThreadCreate(osThread(cliTask), NULL);
 }
 
 /**
@@ -69,8 +77,10 @@ void MX_FREERTOS_Init(void)
  * @param  argument: Not used
  * @retval None
  */
-static void startDefaultTask(void const * argument)
+static void startDefaultTask( void const * argument )
 {
+   PARAM_NOT_USED( argument );
+
    MX_LWIP_Init();
    
    initTcpEchoServer();
@@ -80,6 +90,38 @@ static void startDefaultTask(void const * argument)
       osDelay(1000);
       LOGGING( "Default Task" );
       BSP_LED_Toggle( LED_BLUE );
+   }
+}
+
+/**
+ * @brief Function implementing the CLI task.
+ * @param argument Not used
+ */
+static void startCliTask( void const * argument )
+{
+   PARAM_NOT_USED( argument );
+
+   LOGGING( "CLI Task Started..." );
+
+   auto& cli = lib::CLI::getInstance();
+   auto result = cli.initialize();
+   if ( result != LibErrorCodes::eOK )
+   {
+      LOGGING( "CLI initialization failed, ret=0x%x", result );
+      return;
+   }
+
+   char buffer[CLI_BUFFER_SIZE] = {0};
+
+   for(;;)
+   {
+      if ( cli.getNewCommandLine( buffer, sizeof( buffer ), 30000 ) == LibErrorCodes::eOK )
+      {
+         LOGGING( "Received command line: %s", buffer );
+         cli.processInput( buffer );
+      }
+
+      osDelay( 10 );
    }
 }
 
