@@ -143,7 +143,10 @@ int CLI::tokenize( char* input, char* argv[], int maxArgs )
 
          //!< Replace delimiter with null terminator, if found.
          auto* end = strchr( input, m_delimiter );
-         *end = '\0';
+         if ( end != nullptr )
+         {
+            *end = '\0';
+         }
          break;
       }
 
