@@ -222,6 +222,16 @@ EXIT:
 }
 
 /**
+ * @brief Get the current tick count
+ * 
+ * @return uint32_t a tick count in milliseconds
+ */
+uint32_t LIB_COMMON_getTickMS( void )
+{
+   return static_cast<uint32_t>( xTaskGetTickCount() );
+}
+
+/**
  * @brief  Function to handle stack overflow.
  * 
  * @param xTask a handle to the task that overflowed

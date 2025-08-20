@@ -1,16 +1,17 @@
+/************************************************************************************************************
+ * 
+ * @file common.h
+ * @brief Common definitions and macros for the project
+ *  
+ * @author Sungsu Kim
+ * @copyright 2025 Sungsu Kim
+ * @date 2025-08-20
+ * @version 1.0
+ * 
+ ************************************************************************************************************/
 
 #pragma once
 
-#include "stm32f4xx_hal.h"
-#include "FreeRTOS.h"
-#include <stdio.h>
+/************************************************* Includes ************************************************/    
+#include "lib_common.h"
 
-#define USE_LOGGER
-
-#if defined (USE_LOGGER)
-#define LOGGING( format, ... ) printf( "%08ld: " format "\r\n", xTaskGetTickCount(), ##__VA_ARGS__ )
-#else 
-#define LOGGING( format, ... )
-#endif
-
-#define PARAM_NOT_USED(x) (void)(x)
