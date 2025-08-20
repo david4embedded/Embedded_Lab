@@ -2,6 +2,13 @@
  * 
  * @file logger.cpp
  * @brief Implementation of Logger module for logging messages.
+ * @details This module implements sinking logs to a UART interface in multi-thread environment so that 
+ *             1. log messages can be pushed to the logging buffer from different tasks without blocking them,
+ *             2. log messages from each thread are not mixed, and
+ *             3. log messages are transmitted over UART in the interrupt context, which is way more efficient than polling.
+ *          The external interface of this module is to provide an override to '_write' function, which is called whenever printf is called across the application.
+ *          This helps decouple the logging implementation from the application code.
+ *          For threading support, it makes use of FreeRTOS APIs.
  *  
  * @author Sungsu Kim
  * @copyright 2025 Sungsu Kim
@@ -48,8 +55,8 @@ static void writeLog    ( const char *message );
  */
 void LOGGER_init( )
 {
-   semLogAvailable.initialize( LOGGING_BUFFER_SIZE, 0 );
-   semTxComplete.initialize( 1, 0 );
+   semLogAvailable.initialize( LOGGING_BUFFER_SIZE, 0 );    //!< it works as a counting semaphore
+   semTxComplete.initialize( 1, 0 );                        //!< it works as a binary semaphore
 
    lock.initialize();
 
@@ -94,6 +101,9 @@ static void taskLogging( void const * argument )
 
    for(;;)
    {
+      /* NOTE: It's possible that the it can try to pop more data once it gets signaled, but it shouldn't matter;
+               on the next iteration, it will just check again if there's more data available, 
+               and if there's none, which means it popped all available data, it can just wait for next signal.*/
       if ( semLogAvailable.get( TIMEOUT_MS ) != LibErrorCodes::eOK )
       {
          continue;
@@ -129,7 +139,7 @@ static void taskLogging( void const * argument )
 extern "C" int _write( int file, char *ptr, int len )
 {
    PARAM_NOT_USED( file );
-   
+
    ptr[len] = '\0';
    writeLog( ptr );
 }
