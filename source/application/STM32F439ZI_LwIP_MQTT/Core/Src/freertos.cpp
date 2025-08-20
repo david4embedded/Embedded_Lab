@@ -177,6 +177,16 @@ void mqttMsgArrivedCallback( MessageData* msg )
 }
 
 /**
+ * @brief Get the current tick count
+ * 
+ * @return uint32_t a tick count in milliseconds
+ */
+uint32_t LIB_COMMON_getTickMS( void )
+{
+   return static_cast<uint32_t>( xTaskGetTickCount() );
+}
+
+/**
  * @brief Get memory requirements for the Idle task
  * 
  * @param ppxIdleTaskTCBBuffer double pointer to the Idle task's TCB
