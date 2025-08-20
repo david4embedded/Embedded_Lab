@@ -8,15 +8,12 @@
  ***************************************************************************************************/
 
 /****************************************** Includes ***********************************************/
-#include "common.h"
 #include "main.h"
-#include "stm32f4xx_nucleo_144.h"
 #include "cmsis_os.h"
+#include "stm32f4xx_nucleo_144.h"
 #include "usart.h"
 #include "gpio.h"
-
-/**************************************** External Functions ***************************************/
-extern void MX_FREERTOS_Init     ( );
+#include "common.h"
 
 /**************************************** Local Functions ******************************************/
 static void SystemClock_Config   ( );
@@ -90,18 +87,6 @@ static void SystemClock_Config(void)
    {
       Error_Handler();
    }
-}
-
-/**
- * @brief Redirects the C library printf function to the USART2.
- * @param file: File descriptor (not used)
- * @param ptr: Pointer to the data to be sent
- * @param len: Length of the data to be sent
- * @retval Number of bytes written
- */
-extern "C" int _write(int file, char *ptr, int len)
-{
-   HAL_UART_Transmit(&huart3, (uint8_t*)ptr, len, HAL_MAX_DELAY);
 }
 
 /**

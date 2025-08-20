@@ -25,6 +25,8 @@
 #include "lwip.h"
 #include "lwip/tcp.h"
 #include "stm32f4xx_nucleo_144.h"
+#include "cli.h"
+#include "logger.h"
 
 /************************************************** Consts ****************************************************/
 #define ECHO_SERVER_ADDR_0    192
@@ -33,17 +35,21 @@
 #define ECHO_SERVER_ADDR_3    3
 #define ECHO_SERVER_PORT      7
 
+constexpr size_t CLI_BUFFER_SIZE = 128;
+
 /*********************************************** Local Variables **********************************************/
 static struct tcp_pcb   *echoServerPcb;
 static struct tcp_pcb   *clientPcb;
 static osThreadId       defaultTaskHandle;
+static osThreadId       cliTaskHandle;
 
 static StaticTask_t     xIdleTaskTCBBuffer;
 static StackType_t      xIdleStack[configMINIMAL_STACK_SIZE];
 
 /******************************************** Function Declarations *******************************************/
 void           MX_FREERTOS_Init     ( );
-static void    startDefaultTask     ( void const * argument );
+static void    taskDefault          ( void const * argument );
+static void    taskCli              ( void const * argument );
 
 static void    initTcpEchoServer    ( );
 static err_t   echoAcceptCallback   ( void *arg, struct tcp_pcb *newpcb, err_t err );
@@ -60,8 +66,23 @@ extern "C" void vApplicationStackOverflowHook   ( xTaskHandle xTask, signed char
  */
 void MX_FREERTOS_Init(void) 
 {
-   osThreadDef(defaultTask, startDefaultTask, osPriorityNormal, 0, 512);
-   defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
+   const osThreadDef_t defaultTaskDef = { const_cast<char*>( "defaultTask" ), taskDefault, osPriorityNormal, 0, configMINIMAL_STACK_SIZE, nullptr, nullptr };
+   defaultTaskHandle = osThreadCreate( &defaultTaskDef, nullptr );
+   
+   const osThreadDef_t cliTaskDef = { const_cast<char*>( "cliTask" ), taskCli, osPriorityNormal, 0, 512, nullptr, nullptr };
+   cliTaskHandle = osThreadCreate( &cliTaskDef, nullptr );
+
+   LOGGER_init();
+}
+
+/**
+ * @brief Get the current tick count
+ * 
+ * @return uint32_t a tick count in milliseconds
+ */
+uint32_t LIB_COMMON_getTickMS( void )
+{
+   return static_cast<uint32_t>( xTaskGetTickCount() );
 }
 
 /**
@@ -69,8 +90,10 @@ void MX_FREERTOS_Init(void)
  * @param  argument: Not used
  * @retval None
  */
-static void startDefaultTask(void const * argument)
+static void taskDefault( void const * argument )
 {
+   PARAM_NOT_USED( argument );
+
    MX_LWIP_Init();
    
    initTcpEchoServer();
@@ -80,6 +103,38 @@ static void startDefaultTask(void const * argument)
       osDelay(1000);
       LOGGING( "Default Task" );
       BSP_LED_Toggle( LED_BLUE );
+   }
+}
+
+/**
+ * @brief Function implementing the CLI task.
+ * @param argument Not used
+ */
+static void taskCli( void const * argument )
+{
+   PARAM_NOT_USED( argument );
+
+   LOGGING( "CLI Task Started..." );
+
+   auto& cli = lib::CLI::getInstance();
+   auto result = cli.initialize();
+   if ( result != LibErrorCodes::eOK )
+   {
+      LOGGING( "CLI initialization failed, ret=0x%lx", result );
+      return;
+   }
+
+   char buffer[CLI_BUFFER_SIZE] = {0};
+
+   for(;;)
+   {
+      if ( cli.getNewCommandLine( buffer, sizeof( buffer ), 30000 ) == LibErrorCodes::eOK )
+      {
+         LOGGING( "Received command line: %s", buffer );
+         cli.processInput( buffer );
+      }
+
+      osDelay( 10 );
    }
 }
 
@@ -145,6 +200,8 @@ static err_t echoAcceptCallback( void *arg, struct tcp_pcb *newpcb, err_t err )
  */
 static err_t echoRecvCallback( void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err )
 {
+   PARAM_NOT_USED( arg );
+
    if ( err != ERR_OK )
    {
       LOGGING( "TCPIP: Receive error: %d", err );
@@ -175,29 +232,29 @@ EXIT:
 }
 
 /**
- * @brief  Function to handle stack overflow.
+ * @brief Get memory requirements for the Idle task
  * 
- * @param xTask a handle to the task that overflowed
- * @param pcTaskName the name of the task that overflowed
- * @return __weak 
- */
-__weak void vApplicationStackOverflowHook( xTaskHandle xTask, signed char *pcTaskName )
-{
-   /* Run time stack overflow checking is performed if
-   configCHECK_FOR_STACK_OVERFLOW is defined to 1 or 2. This hook function is
-   called if a stack overflow is detected. */
-}
-
-/**
- * @brief  Function to get memory for the idle task.
- * 
- * @param ppxIdleTaskTCBBuffer a double pointer to the task control block
- * @param ppxIdleTaskStackBuffer a double pointer to the stack buffer
- * @param pulIdleTaskStackSize a pointer to the stack size
+ * @param ppxIdleTaskTCBBuffer double pointer to the Idle task's TCB
+ * @param ppxIdleTaskStackBuffer double pointer to the Idle task's stack
+ * @param pulIdleTaskStackSize pointer to the Idle task's stack size
  */
 void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer, StackType_t **ppxIdleTaskStackBuffer, uint32_t *pulIdleTaskStackSize )
 {
-  *ppxIdleTaskTCBBuffer = &xIdleTaskTCBBuffer;
-  *ppxIdleTaskStackBuffer = &xIdleStack[0];
-  *pulIdleTaskStackSize = configMINIMAL_STACK_SIZE;
+   *ppxIdleTaskTCBBuffer = &xIdleTaskTCBBuffer;
+   *ppxIdleTaskStackBuffer = &xIdleStack[0];
+   *pulIdleTaskStackSize = configMINIMAL_STACK_SIZE;
 }
+
+/**
+ * @brief Stack overflow hook
+ * 
+ * @param xTask a task handle
+ * @param pcTaskName a pointer to the task name
+ */
+void vApplicationStackOverflowHook( xTaskHandle xTask, signed char *pcTaskName )
+{
+   PARAM_NOT_USED( xTask );
+   PARAM_NOT_USED( pcTaskName ); 
+}
+
+

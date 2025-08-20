@@ -1,7 +1,7 @@
 /************************************************************************************************************
  * 
- * @file common.h
- * @brief Common definitions and macros for the project
+ * @file logger.h
+ * @brief Logger module for logging messages.
  *  
  * @author Sungsu Kim
  * @copyright 2025 Sungsu Kim
@@ -12,6 +12,5 @@
 
 #pragma once
 
-/************************************************* Includes ************************************************/    
-#include "lib_common.h"
-
+/******************************************** Function Declarations *****************************************/ 
+void LOGGER_init(void);

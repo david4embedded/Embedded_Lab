@@ -15,18 +15,17 @@ target_compile_definitions(stm32cubemx INTERFACE
 )
 
 target_include_directories(stm32cubemx INTERFACE
-    ../../../../library/RTOS
     ../../Core/Inc
-    ../../LWIP/App
-    ../../LWIP/Target
-    ../../Middlewares/Third_Party/LwIP/src/include
-    ../../Middlewares/Third_Party/LwIP/system
     ../../Drivers/STM32F4xx_HAL_Driver/Inc
     ../../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy
     ../../Drivers/BSP/Components/lan8742
     ../../Drivers/BSP/STM32F4xx_Nucleo_144
-    ../../Drivers/CMSIS/Include
     ../../Drivers/CMSIS/Device/ST/STM32F4xx/Include
+    ../../Drivers/CMSIS/Include
+    ../../LWIP/App
+    ../../LWIP/Target
+    ../../Middlewares/Third_Party/LwIP/src/include
+    ../../Middlewares/Third_Party/LwIP/system
     ../../Middlewares/Third_Party/FreeRTOS/Source/include
     ../../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS
     ../../Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F
@@ -46,19 +45,22 @@ target_include_directories(stm32cubemx INTERFACE
     ../../Middlewares/Third_Party/paho.mqtt/MQTTPacket
     ../../../../library
     ../../../../library/RTOS
+    ../../../../library/utilities
     ../../mqtt
+    ../../config
+    ../../app
 )
 
 target_sources(stm32cubemx INTERFACE
-    ../../startup_stm32f439xx.s
+    ../../startup_stm32f439xx.s    
     ../../Core/Src/main.cpp
     ../../Core/Src/freertos.cpp
     ../../Core/Src/gpio.c
     ../../Core/Src/usart.c
-    ../../Core/Src/system_stm32f4xx.c
     ../../Core/Src/stm32f4xx_it.c
     ../../Core/Src/stm32f4xx_hal_msp.c
     ../../Core/Src/stm32f4xx_hal_timebase_tim.c
+    ../../Core/Src/system_stm32f4xx.c
     ../../Core/Src/sysmem.c
     ../../Core/Src/syscalls.c
     ../../Drivers/BSP/Components/lan8742/lan8742.c
@@ -186,7 +188,10 @@ target_sources(stm32cubemx INTERFACE
     ../../mqtt/mqtt_client_port.c
     ../../mqtt/mqtt_manager_paho.cpp
     ../../LWIP/Target/ethernetif.c
-    ../../LWIP/App/lwip.c    
+    ../../LWIP/App/lwip.c   
+    ../../../../library/utilities/cli.cpp
+    ../../config/config_cli.cpp
+    ../../app/logger.cpp
 )
 
 target_link_directories(stm32cubemx INTERFACE

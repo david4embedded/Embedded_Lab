@@ -48,6 +48,11 @@ public:
    virtual void put( ) = 0;
 
    /**
+    * @brief Releases the semaphore in ISR context.
+    */
+   virtual void putISR( ) = 0;
+
+   /**
     * @brief Waits for the semaphore to be available.
     * 
     * @param timeout_ms Timeout in milliseconds.

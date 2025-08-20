@@ -1,7 +1,7 @@
 /************************************************************************************************************
  * 
- * @file common.h
- * @brief Common definitions and macros for the project
+ * @file config_cli.h
+ * @brief Configuration of CLI module and user-defined commands
  *  
  * @author Sungsu Kim
  * @copyright 2025 Sungsu Kim
@@ -12,6 +12,13 @@
 
 #pragma once
 
-/************************************************* Includes ************************************************/    
-#include "lib_common.h"
+#if defined (__cplusplus)
+extern "C" {
+#endif
 
+/******************************************* Function Declarations ******************************************/    
+void CLI_putCharIntoBuffer( char c );
+
+#if defined (__cplusplus)
+}
+#endif
