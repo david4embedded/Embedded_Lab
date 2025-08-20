@@ -22,7 +22,7 @@
 extern uint32_t g_mqttTick_ms;   //!< from mqtt_client_port.c
 
 /******************************************** Function Declarations *******************************************/
-void SystemClock_Config(void);
+static void SystemClock_Config   ( );
 
 /******************************************** Function Definitions ********************************************/
 /**
@@ -47,13 +47,13 @@ int main(void)
 }
 
 /**
-  * @brief System Clock Configuration
-  * @retval None
-  */
-void SystemClock_Config(void)
+ * @brief System Clock Configuration
+ * @retval None
+ */
+static void SystemClock_Config(void)
 {
-   RCC_OscInitTypeDef RCC_OscInitStruct = {};
-   RCC_ClkInitTypeDef RCC_ClkInitStruct = {};
+   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
    /** Configure the main internal regulator output voltage
     */
@@ -79,7 +79,7 @@ void SystemClock_Config(void)
    /** Initializes the CPU, AHB and APB buses clocks
     */
    RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
-                  |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
    RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
    RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
    RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
@@ -92,13 +92,12 @@ void SystemClock_Config(void)
 }
 
 /**
-  * @brief  Period elapsed callback in non blocking mode
-  * @note   This function is called  when TIM6 interrupt took place, inside
-  * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
-  * a global variable "uwTick" used as application time base.
-  * @param  htim : TIM handle
-  * @retval None
-  */
+ * @brief  Period elapsed callback in non blocking mode
+ * @note   This function is called  when TIM6 interrupt took place, inside
+ *         HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment a global variable "uwTick" used as application time base.
+ * @param  htim : TIM handle
+ * @retval None
+ */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
    if ( htim->Instance == TIM6 ) 
@@ -109,15 +108,14 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 }
 
 /**
-  * @brief  This function is executed in case of error occurrence.
-  * @retval None
-  */
+ * @brief  This function is executed in case of error occurrence.
+ * @retval None
+ */
 void Error_Handler(void)
 {
    __disable_irq();
    while (1)
-   {
-   }
+   { }
 }
 
 #ifdef  USE_FULL_ASSERT

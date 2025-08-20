@@ -36,9 +36,9 @@ constexpr size_t CLI_BUFFER_SIZE = 128;
 
 /*********************************************** Local Variables *********************************************/
 static osThreadId             defaultTaskHandle;
+static osThreadId             cliTaskHandle;
 static osThreadId             mqttClientSubTaskHandle; 
 static osThreadId             mqttClientPubTaskHandle; 
-static osThreadId             cliTaskHandle;
 
 static lib::LockableFreeRTOS  m_lock;
 static MqttBroker             broker{ "192.168.1.2", 1883 };
@@ -48,12 +48,12 @@ static StaticTask_t           xIdleTaskTCBBuffer;
 static StackType_t            xIdleStack[configMINIMAL_STACK_SIZE];
 
 /******************************************** Function Declarations *******************************************/
-static void  taskDefault               ( void const *argument );
-static void  taskMqttClientSubscribe   ( void const *argument );
-static void  taskMqttClientPublish     ( void const *argument );
-static int   mqttConnectBroker         ( );
-static void  mqttMsgArrivedCallback    ( MessageData* msg );
-static void  taskCli                   ( void const * argument );
+static void    taskDefault               ( void const *argument );
+static void    taskMqttClientSubscribe   ( void const *argument );
+static void    taskMqttClientPublish     ( void const *argument );
+static int     mqttConnectBroker         ( );
+static void    mqttMsgArrivedCallback    ( MessageData* msg );
+static void    taskCli                   ( void const * argument );
 
 extern "C" void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer, StackType_t **ppxIdleTaskStackBuffer, uint32_t *pulIdleTaskStackSize );
 extern "C" void vApplicationStackOverflowHook( xTaskHandle xTask, signed char *pcTaskName );
@@ -75,11 +75,21 @@ void MX_FREERTOS_Init(void)
 }
 
 /**
+ * @brief Get the current tick count
+ * 
+ * @return uint32_t a tick count in milliseconds
+ */
+uint32_t LIB_COMMON_getTickMS( void )
+{
+   return static_cast<uint32_t>( xTaskGetTickCount() );
+}
+
+/**
  * @brief  Function implementing the defaultTask thread.
  * @param  argument: Not used
  * @retval None
  */
-static void taskDefault(void const * argument)
+static void taskDefault( void const * argument )
 {
    PARAM_NOT_USED( argument );
 
@@ -217,16 +227,6 @@ static void mqttMsgArrivedCallback( MessageData* msg )
    payload[length] = '\0';
 
    LOGGING( "MQTT: MSG[%d]: %s", length, payload );
-}
-
-/**
- * @brief Get the current tick count
- * 
- * @return uint32_t a tick count in milliseconds
- */
-uint32_t LIB_COMMON_getTickMS( void )
-{
-   return static_cast<uint32_t>( xTaskGetTickCount() );
 }
 
 /**

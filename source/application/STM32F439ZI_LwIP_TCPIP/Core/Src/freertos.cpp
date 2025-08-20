@@ -66,13 +66,23 @@ extern "C" void vApplicationStackOverflowHook   ( xTaskHandle xTask, signed char
  */
 void MX_FREERTOS_Init(void) 
 {
-   osThreadDef( defaultTask, taskDefault, osPriorityNormal, 0, 512 );
-   defaultTaskHandle = osThreadCreate( osThread( defaultTask ), nullptr );
-
-   osThreadDef( cliTask, taskCli, osPriorityNormal, 0, 512 );
-   cliTaskHandle = osThreadCreate( osThread( cliTask ), nullptr );
+   const osThreadDef_t defaultTaskDef = { const_cast<char*>( "defaultTask" ), taskDefault, osPriorityNormal, 0, configMINIMAL_STACK_SIZE, nullptr, nullptr };
+   defaultTaskHandle = osThreadCreate( &defaultTaskDef, nullptr );
+   
+   const osThreadDef_t cliTaskDef = { const_cast<char*>( "cliTask" ), taskCli, osPriorityNormal, 0, 512, nullptr, nullptr };
+   cliTaskHandle = osThreadCreate( &cliTaskDef, nullptr );
 
    LOGGER_init();
+}
+
+/**
+ * @brief Get the current tick count
+ * 
+ * @return uint32_t a tick count in milliseconds
+ */
+uint32_t LIB_COMMON_getTickMS( void )
+{
+   return static_cast<uint32_t>( xTaskGetTickCount() );
 }
 
 /**
@@ -222,42 +232,29 @@ EXIT:
 }
 
 /**
- * @brief Get the current tick count
+ * @brief Get memory requirements for the Idle task
  * 
- * @return uint32_t a tick count in milliseconds
- */
-uint32_t LIB_COMMON_getTickMS( void )
-{
-   return static_cast<uint32_t>( xTaskGetTickCount() );
-}
-
-/**
- * @brief  Function to handle stack overflow.
- * 
- * @param xTask a handle to the task that overflowed
- * @param pcTaskName the name of the task that overflowed
- * @return __weak 
- */
-__weak void vApplicationStackOverflowHook( xTaskHandle xTask, signed char *pcTaskName )
-{
-   PARAM_NOT_USED( xTask );
-   PARAM_NOT_USED( pcTaskName ); 
-   
-   /* Run time stack overflow checking is performed if
-   configCHECK_FOR_STACK_OVERFLOW is defined to 1 or 2. This hook function is
-   called if a stack overflow is detected. */
-}
-
-/**
- * @brief  Function to get memory for the idle task.
- * 
- * @param ppxIdleTaskTCBBuffer a double pointer to the task control block
- * @param ppxIdleTaskStackBuffer a double pointer to the stack buffer
- * @param pulIdleTaskStackSize a pointer to the stack size
+ * @param ppxIdleTaskTCBBuffer double pointer to the Idle task's TCB
+ * @param ppxIdleTaskStackBuffer double pointer to the Idle task's stack
+ * @param pulIdleTaskStackSize pointer to the Idle task's stack size
  */
 void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer, StackType_t **ppxIdleTaskStackBuffer, uint32_t *pulIdleTaskStackSize )
 {
-  *ppxIdleTaskTCBBuffer = &xIdleTaskTCBBuffer;
-  *ppxIdleTaskStackBuffer = &xIdleStack[0];
-  *pulIdleTaskStackSize = configMINIMAL_STACK_SIZE;
+   *ppxIdleTaskTCBBuffer = &xIdleTaskTCBBuffer;
+   *ppxIdleTaskStackBuffer = &xIdleStack[0];
+   *pulIdleTaskStackSize = configMINIMAL_STACK_SIZE;
 }
+
+/**
+ * @brief Stack overflow hook
+ * 
+ * @param xTask a task handle
+ * @param pcTaskName a pointer to the task name
+ */
+void vApplicationStackOverflowHook( xTaskHandle xTask, signed char *pcTaskName )
+{
+   PARAM_NOT_USED( xTask );
+   PARAM_NOT_USED( pcTaskName ); 
+}
+
+

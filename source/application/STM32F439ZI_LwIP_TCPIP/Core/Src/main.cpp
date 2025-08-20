@@ -8,12 +8,12 @@
  ***************************************************************************************************/
 
 /****************************************** Includes ***********************************************/
-#include "common.h"
 #include "main.h"
-#include "stm32f4xx_nucleo_144.h"
 #include "cmsis_os.h"
+#include "stm32f4xx_nucleo_144.h"
 #include "usart.h"
 #include "gpio.h"
+#include "common.h"
 
 /**************************************** External Functions ***************************************/
 extern void MX_FREERTOS_Init     ( );
