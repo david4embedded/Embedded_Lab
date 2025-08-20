@@ -113,9 +113,10 @@ static void taskLogging( void const * argument )
       uint32_t countRead = 0;
 
       //!< Try to pop as much data as possible from the log buffer.
-      lib::lock_guard guard( lock );
-      logBuffer.popBulk( txBuffer, sizeof( txBuffer ), &countRead );
-      guard.~lock_guard();
+      {
+         lib::lock_guard guard( lock );
+         logBuffer.popBulk( txBuffer, sizeof( txBuffer ), &countRead );
+      }
 
       if ( countRead )
       {
