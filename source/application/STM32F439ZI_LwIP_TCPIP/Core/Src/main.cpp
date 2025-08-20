@@ -93,18 +93,6 @@ static void SystemClock_Config(void)
 }
 
 /**
- * @brief Redirects the C library printf function to the USART2.
- * @param file: File descriptor (not used)
- * @param ptr: Pointer to the data to be sent
- * @param len: Length of the data to be sent
- * @retval Number of bytes written
- */
-extern "C" int _write(int file, char *ptr, int len)
-{
-   HAL_UART_Transmit_IT(&huart3, (uint8_t*)ptr, len); 
-}
-
-/**
  * @brief  Period elapsed callback in non blocking mode
  * @note   This function is called  when TIM6 interrupt took place, inside
  *         HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment a global variable "uwTick" used as application time base.
