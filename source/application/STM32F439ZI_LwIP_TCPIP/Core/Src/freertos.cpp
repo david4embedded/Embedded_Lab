@@ -48,8 +48,8 @@ static StackType_t      xIdleStack[configMINIMAL_STACK_SIZE];
 
 /******************************************** Function Declarations *******************************************/
 void           MX_FREERTOS_Init     ( );
-static void    startDefaultTask     ( void const * argument );
-static void    startCliTask         ( void const * argument );
+static void    taskDefault          ( void const * argument );
+static void    taskCli              ( void const * argument );
 
 static void    initTcpEchoServer    ( );
 static err_t   echoAcceptCallback   ( void *arg, struct tcp_pcb *newpcb, err_t err );
@@ -66,11 +66,11 @@ extern "C" void vApplicationStackOverflowHook   ( xTaskHandle xTask, signed char
  */
 void MX_FREERTOS_Init(void) 
 {
-   osThreadDef(defaultTask, startDefaultTask, osPriorityNormal, 0, 512);
-   defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
+   osThreadDef(defaultTask, taskDefault, osPriorityNormal, 0, 512);
+   defaultTaskHandle = osThreadCreate( osThread( defaultTask ), nullptr );
 
-   osThreadDef(cliTask, startCliTask, osPriorityNormal, 0, 512);
-   cliTaskHandle = osThreadCreate(osThread(cliTask), NULL);
+   osThreadDef(cliTask, taskCli, osPriorityNormal, 0, 512);
+   cliTaskHandle = osThreadCreate( osThread( cliTask ), nullptr );
 
    LOGGER_init();
 }
@@ -80,7 +80,7 @@ void MX_FREERTOS_Init(void)
  * @param  argument: Not used
  * @retval None
  */
-static void startDefaultTask( void const * argument )
+static void taskDefault( void const * argument )
 {
    PARAM_NOT_USED( argument );
 
@@ -100,7 +100,7 @@ static void startDefaultTask( void const * argument )
  * @brief Function implementing the CLI task.
  * @param argument Not used
  */
-static void startCliTask( void const * argument )
+static void taskCli( void const * argument )
 {
    PARAM_NOT_USED( argument );
 
@@ -110,7 +110,7 @@ static void startCliTask( void const * argument )
    auto result = cli.initialize();
    if ( result != LibErrorCodes::eOK )
    {
-      LOGGING( "CLI initialization failed, ret=0x%x", result );
+      LOGGING( "CLI initialization failed, ret=0x%lx", result );
       return;
    }
 
@@ -190,6 +190,8 @@ static err_t echoAcceptCallback( void *arg, struct tcp_pcb *newpcb, err_t err )
  */
 static err_t echoRecvCallback( void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err )
 {
+   PARAM_NOT_USED( arg );
+
    if ( err != ERR_OK )
    {
       LOGGING( "TCPIP: Receive error: %d", err );
@@ -228,6 +230,9 @@ EXIT:
  */
 __weak void vApplicationStackOverflowHook( xTaskHandle xTask, signed char *pcTaskName )
 {
+   PARAM_NOT_USED( xTask );
+   PARAM_NOT_USED( pcTaskName ); 
+   
    /* Run time stack overflow checking is performed if
    configCHECK_FOR_STACK_OVERFLOW is defined to 1 or 2. This hook function is
    called if a stack overflow is detected. */

@@ -63,7 +63,7 @@ static void commandTest( int argc, char* argv[] )
 {
    LOGGING( "CLI: 'test' command executed" );
 
-   for( unsigned i = 0; i < argc; ++i )
+   for( int i = 0; i < argc; ++i )
    {
       LOGGING( "CLI: arg[%d]: %s", i, argv[i] );
    }
