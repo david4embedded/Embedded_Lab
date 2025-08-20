@@ -28,7 +28,7 @@ static bool loggingInit = false;
 static void taskLogging ( void const * argument );
 static void writeLog    ( const char *message );
 
-void LOGGING_init( )
+void LOGGER_init( )
 {
    semLogAvailable.initialize( LOGGING_BUFFER_SIZE, 0 );
    semTxComplete.initialize( 1, 0 );
