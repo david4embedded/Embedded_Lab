@@ -16,13 +16,16 @@
 #include "semaphore_FreeRTOS.h"
 #include "common.h"
 
+/************************************************* Consts **************************************************/ 
+constexpr size_t CLI_BUFFER_SIZE = 128;
+
 /******************************************* Function Declarations ******************************************/    
 static void commandTest( int argc, char* argv[] );
 
 /********************************************* Local Variables **********************************************/    
 static lib::CLI::CommandEntry cliCommands[] = 
 {
-   { "test1", commandTest },
+   { "test", commandTest },
 };
 
 /******************************************* Function Definitions *******************************************/    
@@ -35,7 +38,7 @@ namespace lib
  */
 CLI& CLI::getInstance()
 {
-   static char buffer[128];
+   static char buffer[CLI_BUFFER_SIZE];
    static lib::Semaphore_FreeRTOS semaphoreCli;
    static lib::CLI instance{ buffer, sizeof(buffer), '\r', cliCommands, sizeof(cliCommands) / sizeof(cliCommands[0]), semaphoreCli };
    return instance; 
