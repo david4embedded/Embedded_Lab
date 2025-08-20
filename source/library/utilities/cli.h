@@ -2,6 +2,8 @@
  * 
  * @file cli.h
  * @brief Command Line Interface (CLI) module for processing user commands.
+ * @details This module provides functionalities to read, parse, and execute commands.
+ *          This is a singleton class as there will be only one CLI instance in the system.
  *  
  * @author Sungsu Kim
  * @copyright 2025 Sungsu Kim
@@ -43,7 +45,7 @@ public:
 
    ~CLI() = default;
 
-   static CLI&    getInstance          ( );        //!< Singleton instance accessor. The implementation should be in a configuration file, e.g., config_cli.cpp.
+   static CLI&    getInstance          ( );        //!< Singleton instance accessor. The implementation should be in a separate file, e.g., config_cli.cpp, not in cpp.cpp.
 
    ErrorCode      initialize           ( );
    ErrorCode      getNewCommandLine    ( char* buffer, uint32_t sizeBuffer, uint32_t timeout_ms = 3000 );
@@ -68,5 +70,4 @@ private:
    
    lib::ISemaphore&        m_semaphore;            //!< to signal there's a new command line
 };
-
-}
+} /* namespace lib */
