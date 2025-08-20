@@ -83,9 +83,10 @@ public:
     */
    void pushBulk( const T* data, uint32_t sizeBuffer, uint32_t *countWritten )
    {
-      *countWritten = 0;
+      uint32_t counts = 0;
       if ( data == nullptr || sizeBuffer == 0 || countWritten == nullptr )
       {
+         *countWritten = 0;
          return;
       }
 
@@ -95,8 +96,10 @@ public:
          {
             break;
          }
-         *countWritten++;
+         counts++;
       }
+
+      *countWritten = counts;
    }
 
    /**
