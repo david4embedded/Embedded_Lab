@@ -32,10 +32,10 @@ constexpr uint32_t TIMEOUT_MS          = 10000;
 static uint8_t buffer[LOGGING_BUFFER_SIZE];
 static lib::RingBuffer<uint8_t>  logBuffer{ buffer, sizeof( buffer ) };
 
-static osThreadId                taskHandle;
-static lib::LockableFreeRTOS     lock;
-static lib::Semaphore_FreeRTOS   semLogAvailable;
-static lib::Semaphore_FreeRTOS   semTxComplete;
+static osThreadId                taskHandle;                //!< Handle for the logging task
+static lib::LockableFreeRTOS     lock;                      //!< Mutex for protecting access to the logging buffer
+static lib::Semaphore_FreeRTOS   semLogAvailable;           //!< Semaphore for log availability to signal the logging thread
+static lib::Semaphore_FreeRTOS   semTxComplete;             //!< Semaphore for UART transmission completion check to signal the logging thread
 static bool                      loggerInit = false;
 
 /****************************************** Function Declarations *******************************************/ 
@@ -86,7 +86,7 @@ static void writeLog( const char *message )
  *          Once there is a certain amount of data in the buffer, it is transmitted over UART.
  *          And, as the transmission is done in the interrupt context asynchronously, the thread waits until the transmission is complete so that the next transmission can begin in a safe manner.
  *
- * @param argument
+ * @param argument thread argument
  */
 static void taskLogging( void const * argument )
 {
@@ -99,19 +99,20 @@ static void taskLogging( void const * argument )
          continue;
       }
 
-      uint8_t serialTxbuffer[SERIAL_BUFFER_SIZE] = {0};      
+      uint8_t txBuffer[SERIAL_BUFFER_SIZE] = {0};      
       uint32_t countRead = 0;
 
+      //!< Try to pop as much data as possible from the log buffer.
       lib::lock_guard guard( lock );
-      logBuffer.popBulk( serialTxbuffer, sizeof(serialTxbuffer), &countRead );
+      logBuffer.popBulk( txBuffer, sizeof( txBuffer ), &countRead );
       guard.~lock_guard();
 
       if ( countRead )
       {
-         serialTxbuffer[countRead] = '\0';
+         txBuffer[countRead] = '\0';
 
          //!< Initiate the transmission and wait until is complete.
-         HAL_UART_Transmit_IT( &huart3, serialTxbuffer, countRead );
+         HAL_UART_Transmit_IT( &huart3, txBuffer, countRead );
          semTxComplete.get( TIMEOUT_MS );
       }
    }
@@ -127,6 +128,8 @@ static void taskLogging( void const * argument )
  */
 extern "C" int _write( int file, char *ptr, int len )
 {
+   PARAM_NOT_USED( file );
+   
    ptr[len] = '\0';
    writeLog( ptr );
 }
