@@ -29,7 +29,7 @@ public:
 /**
  * @brief Test for RingBuffer push and pop operations
  */
-TEST_F(RingBufferTest, test_all )
+TEST_F(RingBufferTest, test_all)
 {
    constexpr uint32_t LENGTH = 128;
 
@@ -60,4 +60,24 @@ TEST_F(RingBufferTest, test_all )
    uint32_t data;
    result = ring_buffer.pop( data );
    EXPECT_EQ(result, LibErrorCodes::eRING_BUFFER_EMPTY);
+}
+
+TEST_F(RingBufferTest, test_bulk_operations)
+{
+   constexpr uint32_t BUFFER_LENGTH = 128;
+   constexpr uint32_t BULK_BUFFER_LENGTH = 16;
+
+   uint8_t buffer[BUFFER_LENGTH] = {};
+   lib::RingBuffer<uint8_t> ring_buffer(buffer, BUFFER_LENGTH);
+
+   uint8_t bufferForPush[BULK_BUFFER_LENGTH] = { 1,2,4,5,6,7,8,9,10 };
+
+   uint32_t countWritten = 0;
+   ring_buffer.pushBulk(bufferForPush, sizeof(bufferForPush), &countWritten); 
+   EXPECT_EQ(countWritten, BULK_BUFFER_LENGTH);
+
+   uint8_t bufferForPop[BULK_BUFFER_LENGTH];
+   uint32_t countRead = 0;
+   ring_buffer.popBulk(bufferForPop, sizeof(bufferForPop), &countRead);
+   EXPECT_EQ(countRead, BULK_BUFFER_LENGTH);
 }
