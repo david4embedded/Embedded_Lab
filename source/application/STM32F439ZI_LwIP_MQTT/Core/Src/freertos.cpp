@@ -48,12 +48,12 @@ static StaticTask_t           xIdleTaskTCBBuffer;
 static StackType_t            xIdleStack[configMINIMAL_STACK_SIZE];
 
 /******************************************** Function Declarations *******************************************/
-void  startDefaultTask        ( void const *argument );
-void  mqttClientSubTask       ( void const *argument );
-void  mqttClientPubTask       ( void const *argument );
-int   mqttConnectBroker       ( );
-void  mqttMsgArrivedCallback  ( MessageData* msg );
-static void    taskCli              ( void const * argument );
+static void  taskDefault               ( void const *argument );
+static void  taskMqttClientSubscribe   ( void const *argument );
+static void  taskMqttClientPublish     ( void const *argument );
+static int   mqttConnectBroker         ( );
+static void  mqttMsgArrivedCallback    ( MessageData* msg );
+static void  taskCli                   ( void const * argument );
 
 extern "C" void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer, StackType_t **ppxIdleTaskStackBuffer, uint32_t *pulIdleTaskStackSize );
 extern "C" void vApplicationStackOverflowHook( xTaskHandle xTask, signed char *pcTaskName );
@@ -66,7 +66,7 @@ extern "C" void vApplicationStackOverflowHook( xTaskHandle xTask, signed char *p
  */
 void MX_FREERTOS_Init(void) 
 {
-   const osThreadDef_t defaultTaskDef = { const_cast<char*>( "defaultTask" ), startDefaultTask, osPriorityNormal, 0, configMINIMAL_STACK_SIZE, nullptr, nullptr };
+   const osThreadDef_t defaultTaskDef = { const_cast<char*>( "defaultTask" ), taskDefault, osPriorityNormal, 0, configMINIMAL_STACK_SIZE, nullptr, nullptr };
    defaultTaskHandle = osThreadCreate( &defaultTaskDef, nullptr );
    
    osThreadDef( cliTask, taskCli, osPriorityNormal, 0, 512 );
@@ -79,7 +79,7 @@ void MX_FREERTOS_Init(void)
  * @param  argument: Not used
  * @retval None
  */
-void startDefaultTask(void const * argument)
+static void taskDefault(void const * argument)
 {
    PARAM_NOT_USED( argument );
 
@@ -105,10 +105,10 @@ void startDefaultTask(void const * argument)
    //!< Subscribe to the 'test' topic and register the callback
    if(  mqttManager.subscribe( "test", mqttMsgArrivedCallback ) == true )
    {
-      const osThreadDef_t subscribeTaskDef = { const_cast<char*>( "mqttSubscribeTask" ), mqttClientSubTask, osPriorityNormal, 0, configMINIMAL_STACK_SIZE, nullptr, nullptr };
+      const osThreadDef_t subscribeTaskDef = { const_cast<char*>( "mqttSubscribeTask" ), taskMqttClientSubscribe, osPriorityNormal, 0, configMINIMAL_STACK_SIZE, nullptr, nullptr };
       mqttClientSubTaskHandle = osThreadCreate( &subscribeTaskDef, nullptr );
 
-      const osThreadDef_t publishTaskDef = { const_cast<char*>( "mqttPublishTask" ), mqttClientPubTask, osPriorityNormal, 0, configMINIMAL_STACK_SIZE, nullptr, nullptr };
+      const osThreadDef_t publishTaskDef = { const_cast<char*>( "mqttPublishTask" ), taskMqttClientPublish, osPriorityNormal, 0, configMINIMAL_STACK_SIZE, nullptr, nullptr };
       mqttClientPubTaskHandle = osThreadCreate( &publishTaskDef, nullptr );
    }
 
@@ -155,7 +155,7 @@ static void taskCli( void const * argument )
  * 
  * @param argument task argument
  */
-void mqttClientSubTask( void const *argument )
+static void taskMqttClientSubscribe( void const *argument )
 {
    PARAM_NOT_USED( argument );
    LOGGING( "Start MQTT Subscribe Task" );
@@ -175,7 +175,7 @@ void mqttClientSubTask( void const *argument )
  * 
  * @param argument task argument
  */
-void mqttClientPubTask( void const *argument )
+static void taskMqttClientPublish( void const *argument )
 {
    PARAM_NOT_USED( argument );
 
@@ -207,7 +207,7 @@ void mqttClientPubTask( void const *argument )
  * 
  * @param msg a pointer to the MessageData structure
  */
-void mqttMsgArrivedCallback( MessageData* msg )
+static void mqttMsgArrivedCallback( MessageData* msg )
 {
    HAL_GPIO_TogglePin( LD2_GPIO_Port, LD2_Pin );
 
