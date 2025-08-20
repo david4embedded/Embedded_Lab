@@ -26,6 +26,7 @@
 #include "lwip/tcp.h"
 #include "stm32f4xx_nucleo_144.h"
 #include "cli.h"
+#include "logger.h"
 
 /************************************************** Consts ****************************************************/
 #define ECHO_SERVER_ADDR_0    192
@@ -70,6 +71,8 @@ void MX_FREERTOS_Init(void)
 
    osThreadDef(cliTask, startCliTask, osPriorityNormal, 0, 512);
    cliTaskHandle = osThreadCreate(osThread(cliTask), NULL);
+
+   LOGGER_init();
 }
 
 /**
