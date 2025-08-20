@@ -30,13 +30,13 @@ constexpr uint32_t TIMEOUT_MS          = 10000;
 
 /********************************************* Local Variables **********************************************/ 
 static uint8_t buffer[LOGGING_BUFFER_SIZE];
-static lib::RingBuffer<uint8_t>  loggingBuffer{ buffer, sizeof( buffer ) };
+static lib::RingBuffer<uint8_t>  logBuffer{ buffer, sizeof( buffer ) };
 
-static osThreadId                loggingTaskHandle;
-static lib::LockableFreeRTOS     loggingLock;
+static osThreadId                taskHandle;
+static lib::LockableFreeRTOS     lock;
 static lib::Semaphore_FreeRTOS   semLogAvailable;
 static lib::Semaphore_FreeRTOS   semTxComplete;
-static bool                      loggingInit = false;
+static bool                      loggerInit = false;
 
 /****************************************** Function Declarations *******************************************/ 
 static void taskLogging ( void const * argument );
@@ -51,12 +51,12 @@ void LOGGER_init( )
    semLogAvailable.initialize( LOGGING_BUFFER_SIZE, 0 );
    semTxComplete.initialize( 1, 0 );
 
-   loggingLock.initialize();
+   lock.initialize();
 
    osThreadDef( loggingTask, taskLogging, osPriorityNormal, 0, 512 );
-   loggingTaskHandle = osThreadCreate( osThread(loggingTask), nullptr );
+   taskHandle = osThreadCreate( osThread(loggingTask), nullptr );
 
-   loggingInit = true;
+   loggerInit = true;
 }
 
 /**
@@ -68,15 +68,15 @@ void LOGGER_init( )
  */
 static void writeLog( const char *message )
 {
-   if ( !loggingInit )
+   if ( !loggerInit )
    {
       return;
    }
 
    uint32_t countWritten = 0;
 
-   lib::lock_guard guard( loggingLock );
-   loggingBuffer.pushBulk( reinterpret_cast<const uint8_t*>( message ), strlen( message ), &countWritten );
+   lib::lock_guard guard( lock );
+   logBuffer.pushBulk( reinterpret_cast<const uint8_t*>( message ), strlen( message ), &countWritten );
    semLogAvailable.put();
 }
 
@@ -102,8 +102,8 @@ static void taskLogging( void const * argument )
       uint8_t serialTxbuffer[SERIAL_BUFFER_SIZE] = {0};      
       uint32_t countRead = 0;
 
-      lib::lock_guard guard( loggingLock );
-      loggingBuffer.popBulk( serialTxbuffer, sizeof(serialTxbuffer), &countRead );
+      lib::lock_guard guard( lock );
+      logBuffer.popBulk( serialTxbuffer, sizeof(serialTxbuffer), &countRead );
       guard.~lock_guard();
 
       if ( countRead )
