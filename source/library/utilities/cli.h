@@ -1,6 +1,18 @@
+/************************************************************************************************************
+ * 
+ * @file cli.h
+ * @brief Command Line Interface (CLI) module for processing user commands.
+ *  
+ * @author Sungsu Kim
+ * @copyright 2025 Sungsu Kim
+ * @date 2025-08-20
+ * @version 1.0
+ * 
+ ************************************************************************************************************/
 
 #pragma once
 
+/************************************************ Includes **************************************************/ 
 #include "ring_buffer.h"
 #include "ISemaphore.h"
 #include "error_codes_lib.h"
@@ -9,6 +21,7 @@
 
 namespace lib
 {
+/************************************************ Types *****************************************************/    
 class CLI final
 {
 public:
