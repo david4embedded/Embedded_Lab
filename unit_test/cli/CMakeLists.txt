@@ -1,10 +1,11 @@
 # This file is included via add_subdirectory, so there is no need to redefine project().
 
 # Define the source files required for the test executable.
-# cli_test.cpp: The code under test.
+# cli_tests.cpp: The code under test.
 add_executable(
     cli_test
-    cli_test.cpp
+    ../../source/library/utilities/cli.cpp
+    cli_tests.cpp
 )
 
 # Include the GoogleTest module to enable commands like gtest_discover_tests.
@@ -18,7 +19,11 @@ target_include_directories(cli_test PRIVATE
     # Common project and library include paths
     ../../source/common
     ../../source/library
+    ../../source/library/RTOS
     ../../source/library/utilities
+
+    # Mock file include path
+    ../mocks
 )
 
 # Link GoogleTest libraries to the cli_test executable.
