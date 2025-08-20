@@ -175,7 +175,7 @@ target_sources(stm32cubemx INTERFACE
     ../../Middlewares/Third_Party/LwIP/src/apps/mqtt/mqtt.c
     ../../../../library/utilities/cli.cpp
     ../../config/config_cli.cpp
-    ../../app/logging.cpp
+    ../../app/logger.cpp
 )
 
 target_link_directories(stm32cubemx INTERFACE
