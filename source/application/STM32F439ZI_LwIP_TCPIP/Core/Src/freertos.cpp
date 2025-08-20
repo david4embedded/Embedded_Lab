@@ -66,10 +66,10 @@ extern "C" void vApplicationStackOverflowHook   ( xTaskHandle xTask, signed char
  */
 void MX_FREERTOS_Init(void) 
 {
-   osThreadDef(defaultTask, taskDefault, osPriorityNormal, 0, 512);
+   osThreadDef( defaultTask, taskDefault, osPriorityNormal, 0, 512 );
    defaultTaskHandle = osThreadCreate( osThread( defaultTask ), nullptr );
 
-   osThreadDef(cliTask, taskCli, osPriorityNormal, 0, 512);
+   osThreadDef( cliTask, taskCli, osPriorityNormal, 0, 512 );
    cliTaskHandle = osThreadCreate( osThread( cliTask ), nullptr );
 
    LOGGER_init();

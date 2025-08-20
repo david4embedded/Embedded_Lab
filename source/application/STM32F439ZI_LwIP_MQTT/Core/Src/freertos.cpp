@@ -27,12 +27,18 @@
 #include "MQTTClient.h"
 #include "mqtt_client_port.h"
 #include "mqtt_manager_paho.h"
+#include "cli.h"
+#include "logger.h"
 #include <string.h>
+
+/************************************************** Consts ****************************************************/
+constexpr size_t CLI_BUFFER_SIZE = 128;
 
 /*********************************************** Local Variables *********************************************/
 static osThreadId             defaultTaskHandle;
 static osThreadId             mqttClientSubTaskHandle; 
 static osThreadId             mqttClientPubTaskHandle; 
+static osThreadId             cliTaskHandle;
 
 static lib::LockableFreeRTOS  m_lock;
 static MqttBroker             broker{ "192.168.1.2", 1883 };
@@ -47,6 +53,7 @@ void  mqttClientSubTask       ( void const *argument );
 void  mqttClientPubTask       ( void const *argument );
 int   mqttConnectBroker       ( );
 void  mqttMsgArrivedCallback  ( MessageData* msg );
+static void    taskCli              ( void const * argument );
 
 extern "C" void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer, StackType_t **ppxIdleTaskStackBuffer, uint32_t *pulIdleTaskStackSize );
 extern "C" void vApplicationStackOverflowHook( xTaskHandle xTask, signed char *pcTaskName );
@@ -61,6 +68,10 @@ void MX_FREERTOS_Init(void)
 {
    const osThreadDef_t defaultTaskDef = { const_cast<char*>( "defaultTask" ), startDefaultTask, osPriorityNormal, 0, configMINIMAL_STACK_SIZE, nullptr, nullptr };
    defaultTaskHandle = osThreadCreate( &defaultTaskDef, nullptr );
+   
+   osThreadDef( cliTask, taskCli, osPriorityNormal, 0, 512 );
+   cliTaskHandle = osThreadCreate( osThread( cliTask ), nullptr );
+   LOGGER_init();
 }
 
 /**
@@ -104,6 +115,38 @@ void startDefaultTask(void const * argument)
    for(;;)
    {
       osDelay( 10000 );
+   }
+}
+
+/**
+ * @brief Function implementing the CLI task.
+ * @param argument Not used
+ */
+static void taskCli( void const * argument )
+{
+   PARAM_NOT_USED( argument );
+
+   LOGGING( "CLI Task Started..." );
+
+   auto& cli = lib::CLI::getInstance();
+   auto result = cli.initialize();
+   if ( result != LibErrorCodes::eOK )
+   {
+      LOGGING( "CLI initialization failed, ret=0x%lx", result );
+      return;
+   }
+
+   char buffer[CLI_BUFFER_SIZE] = {0};
+
+   for(;;)
+   {
+      if ( cli.getNewCommandLine( buffer, sizeof( buffer ), 30000 ) == LibErrorCodes::eOK )
+      {
+         LOGGING( "Received command line: %s", buffer );
+         cli.processInput( buffer );
+      }
+
+      osDelay( 10 );
    }
 }
 

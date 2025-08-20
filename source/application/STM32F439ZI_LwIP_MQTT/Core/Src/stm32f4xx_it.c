@@ -23,6 +23,8 @@
 #include "stm32f4xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "config_cli.h"
+#include <stdbool.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -47,7 +49,7 @@
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN PFP */
-
+bool IsNewUartRxData();
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -172,7 +174,10 @@ void USART3_IRQHandler(void)
   /* USER CODE END USART3_IRQn 0 */
   HAL_UART_IRQHandler(&huart3);
   /* USER CODE BEGIN USART3_IRQn 1 */
-
+  if ( IsNewUartRxData() )
+  {
+    CLI_putCharIntoBuffer( (uint8_t)(huart3.Instance->DR) );
+  }
   /* USER CODE END USART3_IRQn 1 */
 }
 
@@ -205,5 +210,16 @@ void ETH_IRQHandler(void)
 }
 
 /* USER CODE BEGIN 1 */
+bool IsNewUartRxData()
+{
+   UART_HandleTypeDef *huart = &huart3;
 
+   uint32_t isrflags  = READ_REG(huart->Instance->SR);
+   uint32_t cr1its    = READ_REG(huart->Instance->CR1);
+   if ((isrflags & UART_FLAG_RXNE) && (cr1its & UART_IT_RXNE))
+   {
+      return true;
+   }
+   return false;
+}
 /* USER CODE END 1 */
