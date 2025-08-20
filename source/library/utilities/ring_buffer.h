@@ -102,7 +102,10 @@ public:
          counts++;
       }
 
-      *countWritten = counts;
+      if ( countWritten != nullptr )
+      {
+         *countWritten = counts;
+      }
    }
 
    /**
@@ -136,6 +139,10 @@ public:
    {
       if ( data == nullptr || sizeBuffer == 0 || countRead == nullptr )
       {
+         if ( countRead != nullptr )
+         {
+            *countRead = 0;
+         }
          return;
       }
 
@@ -147,7 +154,10 @@ public:
          m_count--;
       }
 
-      *countRead = count;
+      if ( countRead != nullptr )
+      {
+         *countRead = count;
+      }
    }
 
    //!< Useful getters
@@ -163,5 +173,4 @@ private:
    uint32_t m_tail;        //!< Index of the tail
    uint32_t m_count;       //!< Number of elements in the buffer
 };
-
-}
+} /* namespace lib */
