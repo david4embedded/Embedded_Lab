@@ -110,15 +110,4 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
 }
 
 /* USER CODE BEGIN 1 */
-/**
- * @brief Redirects the C library printf function to the USART2.
- * @param file: File descriptor (not used)
- * @param ptr: Pointer to the data to be sent
- * @param len: Length of the data to be sent
- * @retval Number of bytes written
- */
-int _write(int file, char *ptr, int len)
-{
-   HAL_UART_Transmit( &huart3, (uint8_t*)ptr, len, HAL_MAX_DELAY );
-}
 /* USER CODE END 1 */
