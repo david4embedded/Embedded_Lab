@@ -86,7 +86,10 @@ public:
       uint32_t counts = 0;
       if ( data == nullptr || sizeBuffer == 0 || countWritten == nullptr )
       {
-         *countWritten = 0;
+         if ( countWritten != nullptr )
+         {
+            *countWritten = 0;
+         }
          return;
       }
 
