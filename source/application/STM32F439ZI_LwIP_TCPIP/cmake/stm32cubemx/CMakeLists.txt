@@ -60,8 +60,6 @@ target_sources(stm32cubemx INTERFACE
     ../../Core/Src/system_stm32f4xx.c
     ../../Core/Src/sysmem.c
     ../../Core/Src/syscalls.c
-    ../../LWIP/Target/ethernetif.c
-    ../../LWIP/App/lwip.c
     ../../Drivers/BSP/Components/lan8742/lan8742.c
     ../../Drivers/BSP/Components/lan8742/lan8742.c
     ../../Drivers/BSP/STM32F4xx_Nucleo_144/stm32f4xx_nucleo_144.c
@@ -173,6 +171,8 @@ target_sources(stm32cubemx INTERFACE
     ../../Middlewares/Third_Party/LwIP/src/core/ipv6/nd6.c
     ../../Middlewares/Third_Party/LwIP/system/OS/sys_arch.c
     ../../Middlewares/Third_Party/LwIP/src/apps/mqtt/mqtt.c
+    ../../LWIP/Target/ethernetif.c
+    ../../LWIP/App/lwip.c   
     ../../../../library/utilities/cli.cpp
     ../../config/config_cli.cpp
     ../../app/logger.cpp
