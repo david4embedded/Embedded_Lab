@@ -27,10 +27,16 @@
 #include "MQTTClient.h"
 #include "mqtt_client_port.h"
 #include "mqtt_manager_paho.h"
+#include "cli.h"
+#include "logger.h"
 #include <string.h>
+
+/************************************************** Consts ****************************************************/
+constexpr size_t CLI_BUFFER_SIZE = 128;
 
 /*********************************************** Local Variables *********************************************/
 static osThreadId             defaultTaskHandle;
+static osThreadId             cliTaskHandle;
 static osThreadId             mqttClientSubTaskHandle; 
 static osThreadId             mqttClientPubTaskHandle; 
 
@@ -42,11 +48,12 @@ static StaticTask_t           xIdleTaskTCBBuffer;
 static StackType_t            xIdleStack[configMINIMAL_STACK_SIZE];
 
 /******************************************** Function Declarations *******************************************/
-void  startDefaultTask        ( void const *argument );
-void  mqttClientSubTask       ( void const *argument );
-void  mqttClientPubTask       ( void const *argument );
-int   mqttConnectBroker       ( );
-void  mqttMsgArrivedCallback  ( MessageData* msg );
+static void    taskDefault               ( void const *argument );
+static void    taskMqttClientSubscribe   ( void const *argument );
+static void    taskMqttClientPublish     ( void const *argument );
+static int     mqttConnectBroker         ( );
+static void    mqttMsgArrivedCallback    ( MessageData* msg );
+static void    taskCli                   ( void const * argument );
 
 extern "C" void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer, StackType_t **ppxIdleTaskStackBuffer, uint32_t *pulIdleTaskStackSize );
 extern "C" void vApplicationStackOverflowHook( xTaskHandle xTask, signed char *pcTaskName );
@@ -59,8 +66,22 @@ extern "C" void vApplicationStackOverflowHook( xTaskHandle xTask, signed char *p
  */
 void MX_FREERTOS_Init(void) 
 {
-   const osThreadDef_t defaultTaskDef = { const_cast<char*>( "defaultTask" ), startDefaultTask, osPriorityNormal, 0, configMINIMAL_STACK_SIZE, nullptr, nullptr };
+   const osThreadDef_t defaultTaskDef = { const_cast<char*>( "defaultTask" ), taskDefault, osPriorityNormal, 0, configMINIMAL_STACK_SIZE, nullptr, nullptr };
    defaultTaskHandle = osThreadCreate( &defaultTaskDef, nullptr );
+   
+   osThreadDef( cliTask, taskCli, osPriorityNormal, 0, 512 );
+   cliTaskHandle = osThreadCreate( osThread( cliTask ), nullptr );
+   LOGGER_init();
+}
+
+/**
+ * @brief Get the current tick count
+ * 
+ * @return uint32_t a tick count in milliseconds
+ */
+uint32_t LIB_COMMON_getTickMS( void )
+{
+   return static_cast<uint32_t>( xTaskGetTickCount() );
 }
 
 /**
@@ -68,7 +89,7 @@ void MX_FREERTOS_Init(void)
  * @param  argument: Not used
  * @retval None
  */
-void startDefaultTask(void const * argument)
+static void taskDefault( void const * argument )
 {
    PARAM_NOT_USED( argument );
 
@@ -94,10 +115,10 @@ void startDefaultTask(void const * argument)
    //!< Subscribe to the 'test' topic and register the callback
    if(  mqttManager.subscribe( "test", mqttMsgArrivedCallback ) == true )
    {
-      const osThreadDef_t subscribeTaskDef = { const_cast<char*>( "mqttSubscribeTask" ), mqttClientSubTask, osPriorityNormal, 0, configMINIMAL_STACK_SIZE, nullptr, nullptr };
+      const osThreadDef_t subscribeTaskDef = { const_cast<char*>( "mqttSubscribeTask" ), taskMqttClientSubscribe, osPriorityNormal, 0, configMINIMAL_STACK_SIZE, nullptr, nullptr };
       mqttClientSubTaskHandle = osThreadCreate( &subscribeTaskDef, nullptr );
 
-      const osThreadDef_t publishTaskDef = { const_cast<char*>( "mqttPublishTask" ), mqttClientPubTask, osPriorityNormal, 0, configMINIMAL_STACK_SIZE, nullptr, nullptr };
+      const osThreadDef_t publishTaskDef = { const_cast<char*>( "mqttPublishTask" ), taskMqttClientPublish, osPriorityNormal, 0, configMINIMAL_STACK_SIZE, nullptr, nullptr };
       mqttClientPubTaskHandle = osThreadCreate( &publishTaskDef, nullptr );
    }
 
@@ -108,11 +129,43 @@ void startDefaultTask(void const * argument)
 }
 
 /**
+ * @brief Function implementing the CLI task.
+ * @param argument Not used
+ */
+static void taskCli( void const * argument )
+{
+   PARAM_NOT_USED( argument );
+
+   LOGGING( "CLI Task Started..." );
+
+   auto& cli = lib::CLI::getInstance();
+   auto result = cli.initialize();
+   if ( result != LibErrorCodes::eOK )
+   {
+      LOGGING( "CLI initialization failed, ret=0x%lx", result );
+      return;
+   }
+
+   char buffer[CLI_BUFFER_SIZE] = {0};
+
+   for(;;)
+   {
+      if ( cli.getNewCommandLine( buffer, sizeof( buffer ), 30000 ) == LibErrorCodes::eOK )
+      {
+         LOGGING( "Received command line: %s", buffer );
+         cli.processInput( buffer );
+      }
+
+      osDelay( 10 );
+   }
+}
+
+/**
  * @brief MQTT Client Subscribe Task
  * 
  * @param argument task argument
  */
-void mqttClientSubTask( void const *argument )
+static void taskMqttClientSubscribe( void const *argument )
 {
    PARAM_NOT_USED( argument );
    LOGGING( "Start MQTT Subscribe Task" );
@@ -132,7 +185,7 @@ void mqttClientSubTask( void const *argument )
  * 
  * @param argument task argument
  */
-void mqttClientPubTask( void const *argument )
+static void taskMqttClientPublish( void const *argument )
 {
    PARAM_NOT_USED( argument );
 
@@ -164,7 +217,7 @@ void mqttClientPubTask( void const *argument )
  * 
  * @param msg a pointer to the MessageData structure
  */
-void mqttMsgArrivedCallback( MessageData* msg )
+static void mqttMsgArrivedCallback( MessageData* msg )
 {
    HAL_GPIO_TogglePin( LD2_GPIO_Port, LD2_Pin );
 

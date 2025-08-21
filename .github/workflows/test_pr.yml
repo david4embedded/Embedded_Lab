@@ -1,0 +1,23 @@
+name: Unit Tests
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build_and_test:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure CMake
+        run: cmake -B ${{ github.workspace }}/build -S ${{ github.workspace }}/unit_test
+
+      - name: Build
+        run: cmake --build ${{ github.workspace }}/build
+
+      - name: Run CTest
+        run: ctest --test-dir ${{ github.workspace }}/build --output-on-failure
