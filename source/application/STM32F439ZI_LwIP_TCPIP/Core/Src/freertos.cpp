@@ -2,7 +2,8 @@
  * 
  * @file freertos.cpp
  * @brief This file contains the FreeRTOS initialization and task management functions.
- *        Also, this file includes callbacks or implementations required for libraries or drivers.
+ * @details Also, this file includes callbacks, implementations required for libraries, 
+ *          and any application module initialization codes.
  * 
  * @author Sungsu Kim
  * @copyright 2025 Sungsu Kim
@@ -21,7 +22,6 @@
 #include "lwip/tcp.h"
 #include "stm32f4xx_nucleo_144.h"
 #include "cli.h"
-#include "usart.h"
 #include "logger.h"
 
 /************************************************** Consts ****************************************************/
@@ -225,19 +225,6 @@ static err_t echoRecvCallback( void *arg, struct tcp_pcb *tpcb, struct pbuf *p, 
 EXIT:   
    pbuf_free( p );
    return err;
-}
-
-/**
- * @brief UART transmission complete callback.
- * @details This function is called when the UART transmission is complete in the interrupt context through the HAL,
- *          and it signals the logging thread on the completion of the transmission.
- */
-extern "C" void HAL_UART_TxCpltCallback( UART_HandleTypeDef *huart )
-{
-   if ( huart->Instance == USART3 )
-   {
-      LOGGER_msgXferCompleteCallback();
-   }
 }
 
 /**
