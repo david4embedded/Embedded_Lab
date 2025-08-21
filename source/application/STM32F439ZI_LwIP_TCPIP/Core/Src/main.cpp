@@ -31,6 +31,7 @@ int main(void)
    MX_FREERTOS_Init();
 
    MX_GPIO_Init();
+   MX_USART2_UART_Init();
    MX_USART3_UART_Init();
    BSP_LED_Init( LED_RED );
    BSP_LED_Init( LED_GREEN );
