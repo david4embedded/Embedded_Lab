@@ -13,4 +13,5 @@
 #pragma once
 
 /******************************************** Function Declarations *****************************************/ 
-void LOGGER_init(void);
+void  LOGGER_init                      ( );
+void  LOGGER_msgXferCompleteCallback   ( );

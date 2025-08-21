@@ -67,6 +67,15 @@ void LOGGER_init( )
 }
 
 /**
+ * @brief Callback function called when UART transmission is complete.
+ */
+void LOGGER_msgXferCompleteCallback( )
+{
+   memset( buffer, 0, sizeof(buffer) );
+   semTxComplete.putISR();
+}
+
+/**
  * @brief Writes a log message to the logging buffer.
  * @details As this can be called in multiple threads, pushing the message is protected by a mutex.
  *          Once the message is pushed to the logging buffer, a semaphore is released to notify the logging task.
@@ -143,18 +152,4 @@ extern "C" int _write( int file, char *ptr, int len )
 
    ptr[len] = '\0';
    writeLog( ptr );
-}
-
-/**
- * @brief UART transmission complete callback.
- * @details This function is called when the UART transmission is complete in the interrupt context through the HAL,
- *          and it signals the logging thread on the completion of the transmission.
- */
-extern "C" void HAL_UART_TxCpltCallback( UART_HandleTypeDef *huart )
-{
-   if ( huart->Instance == USART3 )
-   {
-      memset( buffer, 0, sizeof(buffer) );
-      semTxComplete.putISR();
-   }
 }

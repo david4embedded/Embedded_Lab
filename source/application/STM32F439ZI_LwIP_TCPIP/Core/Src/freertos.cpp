@@ -1,20 +1,15 @@
-/* USER CODE BEGIN Header */
-/**
-  ******************************************************************************
-  * File Name          : freertos.c
-  * Description        : Code for freertos applications
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2025 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
-  */
+/************************************************************************************************************
+ * 
+ * @file freertos.cpp
+ * @brief This file contains the FreeRTOS initialization and task management functions.
+ *        Also, this file includes callbacks or implementations required for libraries or drivers.
+ * 
+ * @author Sungsu Kim
+ * @copyright 2025 Sungsu Kim
+ * @date 2025-08-21
+ * @version 1.0
+ * 
+ ************************************************************************************************************/
 
 /************************************************** Includes **************************************************/
 #include "FreeRTOS.h"
@@ -26,6 +21,7 @@
 #include "lwip/tcp.h"
 #include "stm32f4xx_nucleo_144.h"
 #include "cli.h"
+#include "usart.h"
 #include "logger.h"
 
 /************************************************** Consts ****************************************************/
@@ -232,6 +228,19 @@ EXIT:
 }
 
 /**
+ * @brief UART transmission complete callback.
+ * @details This function is called when the UART transmission is complete in the interrupt context through the HAL,
+ *          and it signals the logging thread on the completion of the transmission.
+ */
+extern "C" void HAL_UART_TxCpltCallback( UART_HandleTypeDef *huart )
+{
+   if ( huart->Instance == USART3 )
+   {
+      LOGGER_msgXferCompleteCallback();
+   }
+}
+
+/**
  * @brief Get memory requirements for the Idle task
  * 
  * @param ppxIdleTaskTCBBuffer double pointer to the Idle task's TCB
@@ -256,5 +265,3 @@ void vApplicationStackOverflowHook( xTaskHandle xTask, signed char *pcTaskName )
    PARAM_NOT_USED( xTask );
    PARAM_NOT_USED( pcTaskName ); 
 }
-
-
