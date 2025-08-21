@@ -42,7 +42,7 @@ def main():
    parser.add_argument("password", help="Wi-Fi Password")
    args = parser.parse_args()
 
-   SERIAL_PORT = args.port
+   SERIAL_PORT = args.port.upper()
    wifi_ssid = args.ssid
    wifi_password = args.password
 
