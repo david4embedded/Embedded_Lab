@@ -11,7 +11,8 @@
 
 /****************************************** Includes ***********************************************/ 
 #include "error_codes_lib.h"
-#include <cstdint>
+#include <stdint.h>
+#include <string.h>
 
 /******************************************** Types ************************************************/
 namespace lib
@@ -158,6 +159,15 @@ public:
       {
          *countRead = count;
       }
+   }
+
+   /**
+    * @brief Clear the ring buffer
+    */
+   void clear()
+   {
+      m_head = m_tail = m_count = 0; 
+      memset( m_buffer, 0, m_size * sizeof(T) );
    }
 
    //!< Useful getters
