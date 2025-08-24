@@ -26,6 +26,8 @@ namespace lib
  * @brief Serial device class for handling asynchronous communication.
  * @details This class provides an interface for sending and receiving data over a serial connection.
  *          For the actual transmision of bytes, it utilizes a Sender function, which should be provided by the user, e.g., a UART driver function.
+ *          For the reception of bytes, the pushRxByte method is expected to be called in a UART interrupt handler, so a rx byte can be pushed into the receive buffer in real time.
+ *          Then the user can retrieve the Rx bytes by calling the getRxByte method in an application thread.
  */
 class SerialDevice
 {
