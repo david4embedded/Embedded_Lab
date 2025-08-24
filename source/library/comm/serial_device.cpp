@@ -24,6 +24,11 @@ namespace lib
  */
 ErrorCode SerialDevice::initialize()
 {
+   if ( m_isInitialized )
+   {
+      return LibErrorCodes::eOK;
+   }
+
    ZERO_BUFFER( m_txBuffer );
 
    m_lockable.initialize();
