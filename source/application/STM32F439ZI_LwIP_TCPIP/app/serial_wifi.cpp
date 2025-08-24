@@ -61,24 +61,32 @@ void SerialWifi::waitResponse( uint32_t timeout_ms )
 {
    uint8_t rxBuffer[128];
    ZERO_BUFFER( rxBuffer );
-   auto *buffer = rxBuffer;
-
-   while( 1 )
+   
+   auto tickStart = LIB_COMMON_getTickMS();
+   
+   auto i = 0;
+   auto timeoutRemaining = timeout_ms;
+   
+   while( timeoutRemaining )
    {
       uint8_t byte = 0;
-      const auto result = m_serialDevice.getRxByte( byte, timeout_ms );
+      const auto result = m_serialDevice.getRxByte( byte, timeoutRemaining );
       if ( result == LibErrorCodes::eOK )
       {
-         *buffer++ = byte;
+         if ( i >= sizeof(rxBuffer) )
+         {
+            LOGGING( "SerialWifi: Response buffer overflow", rxBuffer );
+            break;
+         }
+         rxBuffer[i++] = byte;
       }
       else
       {
-         if ( result != LibErrorCodes::eSEMAPHORE_GET_TIME_OUT )
-         {
-            LOGGING( "SerialWifi: GetRxByte failed, ret=0x%lx", result );
-         }
          break;
       }
+
+      const auto elapsed = LIB_COMMON_getTickMS() - tickStart;
+      timeoutRemaining = timeout_ms - elapsed;
    }
 
    LOGGING( "SerialWifi: Response: %s", rxBuffer );

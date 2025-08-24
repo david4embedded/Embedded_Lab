@@ -17,6 +17,7 @@
 #include "common.h"
 #include "cmsis_os.h"
 #include "config_serial_wifi.h"
+#include <stdlib.h>
 
 /************************************************* Consts ***************************************************/
 constexpr size_t CLI_BUFFER_SIZE = 128;
@@ -75,7 +76,7 @@ static void commandSerialWifi( int argc, char* argv[] )
 {
    LOGGING( "CLI: 'wifi' command executed" );
 
-   if ( argc < 2 )
+   if ( argc < 3 )
    {
       LOGGING( "CLI: 'wifi' command requires at least 2 arguments" );
       return;
@@ -83,12 +84,12 @@ static void commandSerialWifi( int argc, char* argv[] )
 
    char buffer[128] = {0};
    snprintf( buffer, sizeof(buffer), "%s\r\n", argv[1] );
+   const auto timeout_ms = static_cast<uint32_t>( atoi( argv[2] ) );
 
    auto& serialWifi = SERIAL_WIFI_get();
-   serialWifi.sendWait( (const char*)buffer );
+   serialWifi.sendWait( reinterpret_cast<const char*>(buffer) );
 
-   LOGGING( "CLI: wait for 5000ms for response" ); 
-   osDelay( 5000 );
+   LOGGING( "CLI: Wait for %dms for response", timeout_ms ); 
 
-   serialWifi.waitResponse( 100 );
+   serialWifi.waitResponse( timeout_ms );
 }
