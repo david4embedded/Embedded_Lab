@@ -29,8 +29,8 @@ public:
    ~SerialWifi() = default;
 
    void  initialize   ( );
-   void  sendWait     ( const char* message );
-   void  showResponse ( );
+   void  sendWait     ( const char* message, bool flushRxBefore = true );
+   void  waitResponse ( uint32_t timeout_ms );
 
 private:
    lib::SerialDevice& m_serialDevice;

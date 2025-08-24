@@ -68,6 +68,7 @@ ErrorCode SerialDevice::sendDataAsync( const uint8_t* data, size_t length )
    ZERO_BUFFER( m_txBuffer );
    memcpy( m_txBuffer, data, length );
 
+   //!< Send the message through the sender function, that is passed through the constructor
    m_sender( m_txBuffer, length );
 
    return LibErrorCodes::eOK;

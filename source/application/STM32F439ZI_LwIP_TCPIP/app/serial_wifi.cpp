@@ -30,10 +30,14 @@ void SerialWifi::initialize()
  * @brief Send a message over the Wi-Fi serial device.
  * 
  * @param message The message to be sent.
+ * @param flushRxBefore Whether to flush the RX buffer before sending the message. Default is true.
  */
-void SerialWifi::sendWait( const char* message )
+void SerialWifi::sendWait( const char* message, bool flushRxBefore /* = true */ )
 {
-   m_serialDevice.flushRxBuffer();
+   if ( flushRxBefore )
+   {
+      m_serialDevice.flushRxBuffer();
+   }
 
    auto result = m_serialDevice.sendDataAsync( reinterpret_cast<const uint8_t*>( message ), strlen( message ) );
    if ( result != LibErrorCodes::eOK )
@@ -50,20 +54,19 @@ void SerialWifi::sendWait( const char* message )
 
 /**
  * @brief Show the response from the Wi-Fi serial device.
+ * 
+ * @param timeout_ms the amount of time to finish waiting if no response is received within
  */
-void SerialWifi::showResponse()
+void SerialWifi::waitResponse( uint32_t timeout_ms )
 {
    uint8_t rxBuffer[128];
    ZERO_BUFFER( rxBuffer );
    auto *buffer = rxBuffer;
 
-   const uint32_t TIMEOUT_MS = 5000;
-   LOGGING( "SerialWifi: Waiting for response...(for %dms)", TIMEOUT_MS );
-
    while( 1 )
    {
       uint8_t byte = 0;
-      auto result = m_serialDevice.getRxByte( byte, TIMEOUT_MS );
+      const auto result = m_serialDevice.getRxByte( byte, timeout_ms );
       if ( result == LibErrorCodes::eOK )
       {
          *buffer++ = byte;

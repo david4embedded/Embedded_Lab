@@ -87,6 +87,8 @@ static void commandSerialWifi( int argc, char* argv[] )
    auto& serialWifi = SERIAL_WIFI_get();
    serialWifi.sendWait( (const char*)buffer );
 
-   osDelay( 10 );
-   serialWifi.showResponse();
+   LOGGING( "CLI: wait for 5000ms for response" ); 
+   osDelay( 5000 );
+
+   serialWifi.waitResponse( 100 );
 }
