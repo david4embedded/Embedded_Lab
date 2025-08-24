@@ -7,7 +7,7 @@
 add_executable(
     message_passer_test
     message_passer_test.cpp
-    ../../source/library/comm/message_passer/message_passer.cpp
+    ../../source/library/comm/message_passer.cpp
     ../mocks/mock_FreeRTOS.cpp
 )
 
@@ -24,7 +24,7 @@ target_include_directories(message_passer_test PRIVATE
     # Common project and library include paths
     ../../source/common
     ../../source/library/RTOS
-    ../../source/library/comm/message_passer
+    ../../source/library/comm
     ../../app/library
 
     # FreeRTOS-related include paths
