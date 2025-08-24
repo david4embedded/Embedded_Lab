@@ -19,21 +19,29 @@
 #include "lockable_FreeRTOS.hpp"
 #include "semaphore_FreeRTOS.h"
 #include "usart.h"
-#include "logger.h"
 
 /************************************************* Consts ***************************************************/
 constexpr size_t RX_BUFFER_SIZE = 128;
 
 /******************************************* Function Declarations ******************************************/    
 static bool isNewUartRxData   ( UART_HandleTypeDef *huart );
-static void sendUart          ( const uint8_t* data, size_t length );
+static void sendUart1         ( const uint8_t* data, size_t length );
+static void sendUart2         ( const uint8_t* data, size_t length );
 
 /********************************************* Local Variables **********************************************/    
-static uint8_t                 rxBuffer[RX_BUFFER_SIZE] = {0};
-static lib::LockableFreeRTOS   lockable;
-static lib::Semaphore_FreeRTOS semTxComplete;
-static lib::Semaphore_FreeRTOS semNewRxBytes;
-static lib::SerialDevice       serialDevice{ sendUart, rxBuffer, sizeof(rxBuffer), lockable, semTxComplete, semNewRxBytes };
+//!< For SerialDevice #1 (Logger module)
+static uint8_t                 rxBuffer1[RX_BUFFER_SIZE] = {0};
+static lib::LockableFreeRTOS   lockable1;
+static lib::Semaphore_FreeRTOS semTxComplete1;
+static lib::Semaphore_FreeRTOS semNewRxBytes1;
+static lib::SerialDevice       serialDevice1{ sendUart1, rxBuffer1, sizeof(rxBuffer1), lockable1, semTxComplete1, semNewRxBytes1 };
+
+//!< For SerialDevice #2 (SerialWifi module)
+static uint8_t                 rxBuffer2[RX_BUFFER_SIZE] = {0};
+static lib::LockableFreeRTOS   lockable2;
+static lib::Semaphore_FreeRTOS semTxComplete2;
+static lib::Semaphore_FreeRTOS semNewRxBytes2;
+static lib::SerialDevice       serialDevice2{ sendUart2, rxBuffer2, sizeof(rxBuffer2), lockable2, semTxComplete2, semNewRxBytes2 };
 
 /******************************************* Function Definitions *******************************************/    
 /**
@@ -43,7 +51,7 @@ static lib::SerialDevice       serialDevice{ sendUart, rxBuffer, sizeof(rxBuffer
  */
 lib::SerialDevice& SERIAL_DEVICE_get( eSerialDevice device )
 {
-   return serialDevice;
+   return ( device == eSerialDevice::DEVICE_1 ) ? serialDevice1 : serialDevice2;
 }
 
 /**
@@ -54,7 +62,7 @@ extern "C" void USART2_IRQHandler(void)
    HAL_UART_IRQHandler( &huart2 );
    if ( isNewUartRxData( &huart2 ) )
    {
-      auto &serialDevice = SERIAL_DEVICE_get( eSerialDevice::DEVICE_1 );
+      auto &serialDevice = SERIAL_DEVICE_get( eSerialDevice::DEVICE_2 );
       serialDevice.pushRxByte( static_cast<uint8_t>( huart2.Instance->DR ) );
    }
 }
@@ -81,13 +89,14 @@ extern "C" void HAL_UART_TxCpltCallback( UART_HandleTypeDef *huart )
 {
    if ( huart->Instance == USART2 )
    {
-      auto &serialDevice = SERIAL_DEVICE_get( eSerialDevice::DEVICE_1 );
+      auto &serialDevice = SERIAL_DEVICE_get( eSerialDevice::DEVICE_2 );
       serialDevice.notifySendComplete();
    }
 
    if ( huart->Instance == USART3 )
    {
-      LOGGER_msgXferCompleteCallback();
+      auto &serialDevice = SERIAL_DEVICE_get( eSerialDevice::DEVICE_1 );
+      serialDevice.notifySendComplete();
    }
 }
 
@@ -97,7 +106,18 @@ extern "C" void HAL_UART_TxCpltCallback( UART_HandleTypeDef *huart )
  * @param data Pointer to the data to be sent.
  * @param length Length of the data to be sent.
  */
-static void sendUart( const uint8_t* data, size_t length )
+static void sendUart1( const uint8_t* data, size_t length )
+{
+   HAL_UART_Transmit_IT( &huart3, (uint8_t*)data, length );
+}
+
+/**
+ * @brief Send data over UART.
+ * 
+ * @param data Pointer to the data to be sent.
+ * @param length Length of the data to be sent.
+ */
+static void sendUart2( const uint8_t* data, size_t length )
 {
    HAL_UART_Transmit_IT( &huart2, (uint8_t*)data, length );
 }

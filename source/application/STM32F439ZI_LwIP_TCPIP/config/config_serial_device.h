@@ -20,7 +20,8 @@
  */
 enum class eSerialDevice
 {
-   DEVICE_1,
+   DEVICE_1,   //!< LOGGER
+   DEVICE_2,   //!< SerialWifi
 };
 
 /******************************************* Function Declarations ******************************************/    

@@ -16,7 +16,7 @@
 #include "config_serial_device.h"
 
 /********************************************* Local Variables **********************************************/    
-static SerialWifi serialWifi{ SERIAL_DEVICE_get( eSerialDevice::DEVICE_1 ) };
+static SerialWifi serialWifi{ SERIAL_DEVICE_get( eSerialDevice::DEVICE_2 ) };
 
 /******************************************* Function Definitions *******************************************/   
 /**

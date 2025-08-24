@@ -27,7 +27,7 @@
 #include "semaphore_FreeRTOS.h"
 #include "lockguard.hpp"
 #include "ring_buffer.h"
-#include "usart.h"
+#include "config_serial_device.h"
 #include <string.h>
 
 /************************************************ Consts ****************************************************/ 
@@ -42,7 +42,6 @@ static lib::RingBuffer<uint8_t>  logBuffer{ buffer, sizeof( buffer ) };
 static osThreadId                taskHandle;                //!< Handle for the logging task
 static lib::LockableFreeRTOS     lock;                      //!< Mutex for protecting access to the logging buffer
 static lib::Semaphore_FreeRTOS   semLogAvailable;           //!< Semaphore for log availability to signal the logging thread
-static lib::Semaphore_FreeRTOS   semTxComplete;             //!< Semaphore for UART transmission completion check to signal the logging thread
 static bool                      loggerInit = false;
 
 /****************************************** Function Declarations *******************************************/ 
@@ -56,23 +55,15 @@ static void writeLog    ( const char *message );
 void LOGGER_init( )
 {
    semLogAvailable.initialize( LOGGING_BUFFER_SIZE, 0 );    //!< it works as a counting semaphore
-   semTxComplete.initialize( 1, 0 );                        //!< it works as a binary semaphore
-
    lock.initialize();
+
+   auto& serialDevice = SERIAL_DEVICE_get( eSerialDevice::DEVICE_1 );
+   serialDevice.initialize();
 
    osThreadDef( loggingTask, taskLogging, osPriorityNormal, 0, 512 );
    taskHandle = osThreadCreate( osThread(loggingTask), nullptr );
 
    loggerInit = true;
-}
-
-/**
- * @brief Callback function called when UART transmission is complete.
- */
-void LOGGER_msgXferCompleteCallback( )
-{
-   memset( buffer, 0, sizeof(buffer) );
-   semTxComplete.putISR();
 }
 
 /**
@@ -131,9 +122,10 @@ static void taskLogging( void const * argument )
       {
          txBuffer[countRead] = '\0';
 
-         //!< Initiate the transmission and wait until is complete.
-         HAL_UART_Transmit_IT( &huart3, txBuffer, countRead );
-         semTxComplete.get( TIMEOUT_MS );
+         auto& serialDevice = SERIAL_DEVICE_get( eSerialDevice::DEVICE_1 );
+
+         serialDevice.sendDataAsync( txBuffer, countRead );
+         serialDevice.waitSendComplete( 2000 );
       }
    }
 }
