@@ -65,6 +65,12 @@ static void commandTest( int argc, char* argv[] )
    }
 }
 
+/**
+ * @brief Process the 'wifi' command
+ * 
+ * @param argc the number of arguments
+ * @param argv the argument values
+ */
 static void commandSerialWifi( int argc, char* argv[] )
 {
    LOGGING( "CLI: 'wifi' command executed" );
