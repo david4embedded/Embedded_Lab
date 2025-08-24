@@ -21,8 +21,9 @@
 #include "lwip.h"
 #include "lwip/tcp.h"
 #include "stm32f4xx_nucleo_144.h"
-#include "cli.h"
 #include "logger.h"
+#include "config_cli.h"
+#include "config_serial_wifi.h"
 
 /************************************************** Consts ****************************************************/
 #define ECHO_SERVER_ADDR_0    192
@@ -93,11 +94,11 @@ static void taskDefault( void const * argument )
    MX_LWIP_Init();
    
    initTcpEchoServer();
+   SERIAL_WIFI_get().initialize();
 
    for(;;)
    {    
       osDelay(1000);
-      LOGGING( "Default Task" );
       BSP_LED_Toggle( LED_BLUE );
    }
 }

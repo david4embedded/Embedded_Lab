@@ -15,17 +15,21 @@
 #include "cli.h"
 #include "semaphore_FreeRTOS.h"
 #include "common.h"
+#include "cmsis_os.h"
+#include "config_serial_wifi.h"
 
-/************************************************* Consts **************************************************/ 
+/************************************************* Consts ***************************************************/
 constexpr size_t CLI_BUFFER_SIZE = 128;
 
 /******************************************* Function Declarations ******************************************/    
-static void commandTest( int argc, char* argv[] );
+static void commandTest       ( int argc, char* argv[] );
+static void commandSerialWifi ( int argc, char* argv[] );
 
 /********************************************* Local Variables **********************************************/    
 static lib::CLI::CommandEntry cliCommands[] = 
 {
    { "test", commandTest },
+   { "wifi", commandSerialWifi }
 };
 
 /******************************************* Function Definitions *******************************************/    
@@ -46,17 +50,6 @@ CLI& CLI::getInstance()
 } /* namespace lib */
 
 /**
- * @brief Put a character into the CLI buffer
- * 
- * @param c character to be added to the buffer
- */
-void CLI_putCharIntoBuffer( char c )
-{
-   auto& cli = lib::CLI::getInstance();
-   cli.putCharIntoBuffer(c);
-}
-
-/**
  * @brief Process the 'test' command
  * 
  * @param argc the number of arguments
@@ -70,4 +63,24 @@ static void commandTest( int argc, char* argv[] )
    {
       LOGGING( "CLI: arg[%d]: %s", i, argv[i] );
    }
+}
+
+static void commandSerialWifi( int argc, char* argv[] )
+{
+   LOGGING( "CLI: 'wifi' command executed" );
+
+   if ( argc < 2 )
+   {
+      LOGGING( "CLI: 'wifi' command requires at least 2 arguments" );
+      return;
+   }
+
+   char buffer[128] = {0};
+   snprintf( buffer, sizeof(buffer), "%s\r\n", argv[1] );
+
+   auto& serialWifi = SERIAL_WIFI_get();
+   serialWifi.sendWait( (const char*)buffer );
+
+   osDelay( 10 );
+   serialWifi.showResponse();
 }

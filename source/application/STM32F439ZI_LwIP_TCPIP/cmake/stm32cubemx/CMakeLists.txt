@@ -42,6 +42,7 @@ target_include_directories(stm32cubemx INTERFACE
     ../../Middlewares/Third_Party/LwIP/src/include/compat/stdc
     ../../Middlewares/Third_Party/LwIP/system/arch
     ../../../../library
+    ../../../../library/comm
     ../../../../library/RTOS
     ../../../../library/utilities
     ../../config
@@ -174,8 +175,12 @@ target_sources(stm32cubemx INTERFACE
     ../../LWIP/Target/ethernetif.c
     ../../LWIP/App/lwip.c   
     ../../../../library/utilities/cli.cpp
+    ../../../../library/comm/serial_device.cpp
     ../../config/config_cli.cpp
+    ../../config/config_serial_device.cpp    
+    ../../config/config_serial_wifi.cpp
     ../../app/logger.cpp
+    ../../app/serial_wifi.cpp
 )
 
 target_link_directories(stm32cubemx INTERFACE

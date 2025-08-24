@@ -21,7 +21,7 @@
 #include "usart.h"
 
 /* USER CODE BEGIN 0 */
-#include "logger.h"
+
 /* USER CODE END 0 */
 
 UART_HandleTypeDef huart2;
@@ -52,7 +52,7 @@ void MX_USART2_UART_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN USART2_Init 2 */
-
+  __HAL_UART_ENABLE_IT(&huart2, UART_IT_RXNE);
   /* USER CODE END USART2_Init 2 */
 
 }
@@ -191,16 +191,5 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
 }
 
 /* USER CODE BEGIN 1 */
-/**
- * @brief UART transmission complete callback.
- * @details This function is called when the UART transmission is complete in the interrupt context through the HAL,
- *          and it signals the logging thread on the completion of the transmission.
- */
-void HAL_UART_TxCpltCallback( UART_HandleTypeDef *huart )
-{
-   if ( huart->Instance == USART3 )
-   {
-      LOGGER_msgXferCompleteCallback();
-   }
-}
+
 /* USER CODE END 1 */
