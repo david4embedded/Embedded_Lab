@@ -19,6 +19,7 @@ extern "C" {
 /************************************************ Includes *************************************************/    
 #include <stdio.h>
 #include <stdint.h>
+#include <string.h>
 
 /************************************************* Consts **************************************************/    
 #define USE_LOGGER
@@ -31,6 +32,8 @@ extern "C" {
 #else 
 #define LOGGING( format, ... )
 #endif
+
+#define ZERO_BUFFER( buf ) memset( buf, 0, sizeof( buf ) )
 
 /******************************************* Function Declarations *****************************************/    
 /**

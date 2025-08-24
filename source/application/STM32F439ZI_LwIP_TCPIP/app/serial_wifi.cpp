@@ -42,7 +42,7 @@ void SerialWifi::sendWait( const char* message )
 
    LOGGING( "SerialWifi: Sending '%s' (%d bytes)", message, msgLength );
 
-   memset( m_txBuffer, 0, sizeof( m_txBuffer ) );
+   ZERO_BUFFER( m_txBuffer );
    memcpy( m_txBuffer, message, msgLength );
 
    m_serialDevice.flushRxBuffer();
@@ -66,8 +66,8 @@ void SerialWifi::sendWait( const char* message )
 void SerialWifi::showResponse()
 {
    uint8_t rxBuffer[128];
-   memset( rxBuffer, 0, sizeof(rxBuffer) );
-   
+   ZERO_BUFFER( rxBuffer );
+
    auto *buffer = rxBuffer;
 
    constexpr uint32_t TIMEOUT_MS = 5000;
