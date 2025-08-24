@@ -12,6 +12,7 @@
 
 /************************************************ Includes **************************************************/
 #include "serial_device.h"
+#include "common.h"
 
 /******************************************* Function Definitions *******************************************/    
 namespace lib
@@ -23,9 +24,12 @@ namespace lib
  */
 ErrorCode SerialDevice::initialize()
 {
+   ZERO_BUFFER( m_txBuffer );
+
    m_lockable.initialize();
    m_semTxComplete.initialize( 1, 0 );
    m_semNewRxBytes.initialize( m_rxBuffer.size(), 0 );
+   
    m_isInitialized = true;
 
    return LibErrorCodes::eOK;
@@ -33,6 +37,8 @@ ErrorCode SerialDevice::initialize()
 
 /**
  * @brief Send data over UART.
+ * @details This function is non-blocking and returns immediately after initiating the send operation.
+ *          However, sending is allowed only if the previous sending has completed, which is confirmed through the waitSendComplete() function.
  * 
  * @param data Pointer to the data to be sent.
  * @param length Length of the data to be sent.
@@ -47,13 +53,22 @@ ErrorCode SerialDevice::sendDataAsync( const uint8_t* data, size_t length )
       return LibErrorCodes::eSERIAL_DEVICE_NOT_INITIALIZED;
    }
 
+   if ( length > TX_BUFFER_SIZE )
+   {
+      return LibErrorCodes::eSERIAL_DEVICE_TX_MSG_TOO_LONG;
+   }
+
    if ( m_isSending )
    {
       return LibErrorCodes::eSERIAL_DEVICE_SEND_ACTIVE;
    }
    
    m_isSending = true;
-   m_sender( data, length );
+
+   ZERO_BUFFER( m_txBuffer );
+   memcpy( m_txBuffer, data, length );
+
+   m_sender( m_txBuffer, length );
 
    return LibErrorCodes::eOK;
 }
@@ -72,6 +87,8 @@ ErrorCode SerialDevice::waitSendComplete( uint32_t timeout_ms )
    }
 
    const auto result = m_semTxComplete.get( timeout_ms );
+
+   //!< Set the flag to false, regardless of the result
    m_isSending = false;
 
    return result;
@@ -131,7 +148,6 @@ ErrorCode SerialDevice::getRxByte( uint8_t& data, uint32_t timeout_ms )
    {
       return result;
    }
-
    return m_rxBuffer.pop( data );
 }
 } /* namespace lib */

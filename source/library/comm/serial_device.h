@@ -12,6 +12,7 @@ namespace lib
 class SerialDevice
 {
 public:
+   constexpr static size_t TX_BUFFER_SIZE = 256;
    using SendFunction = void(*)( const uint8_t* data, size_t length );
 
    SerialDevice( SendFunction sender, uint8_t rxBuffer[], size_t rxBufferSize, lib::ILockable& lockable, lib::ISemaphore& semTxComplete, lib::ISemaphore& semNewRxBytes )
@@ -40,6 +41,7 @@ public:
 
 private:
    SendFunction             m_sender;
+   uint8_t                  m_txBuffer[TX_BUFFER_SIZE];
    lib::RingBuffer<uint8_t> m_rxBuffer;
    lib::ILockable&          m_lockable;
    lib::ISemaphore&         m_semTxComplete;

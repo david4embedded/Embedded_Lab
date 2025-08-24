@@ -33,6 +33,5 @@ public:
    void  showResponse ( );
 
 private:
-   uint8_t m_txBuffer[TX_BUFFER_SIZE] = {0};
    lib::SerialDevice& m_serialDevice;
 };

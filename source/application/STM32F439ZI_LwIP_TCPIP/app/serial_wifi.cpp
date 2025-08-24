@@ -33,21 +33,9 @@ void SerialWifi::initialize()
  */
 void SerialWifi::sendWait( const char* message )
 {
-   const auto msgLength = strlen( message );
-   if ( msgLength > sizeof( m_txBuffer ) )
-   {
-      LOGGING( "SerialWifi: Message too long (%d bytes)", msgLength );
-      return;
-   }
-
-   LOGGING( "SerialWifi: Sending '%s' (%d bytes)", message, msgLength );
-
-   ZERO_BUFFER( m_txBuffer );
-   memcpy( m_txBuffer, message, msgLength );
-
    m_serialDevice.flushRxBuffer();
 
-   auto result = m_serialDevice.sendDataAsync( m_txBuffer, msgLength );
+   auto result = m_serialDevice.sendDataAsync( reinterpret_cast<const uint8_t*>( message ), strlen( message ) );
    if ( result != LibErrorCodes::eOK )
    {
       LOGGING( "SerialWifi: Send failed, ret=0x%lx", result );
@@ -67,10 +55,10 @@ void SerialWifi::showResponse()
 {
    uint8_t rxBuffer[128];
    ZERO_BUFFER( rxBuffer );
-
    auto *buffer = rxBuffer;
 
-   constexpr uint32_t TIMEOUT_MS = 5000;
+   const uint32_t TIMEOUT_MS = 5000;
+   LOGGING( "SerialWifi: Waiting for response...(for %dms)", TIMEOUT_MS );
 
    while( 1 )
    {
