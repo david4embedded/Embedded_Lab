@@ -14,9 +14,11 @@
 #include "serial_wifi.h"
 #include "config_serial_wifi.h"
 #include "config_serial_device.h"
+#include "lockable_FreeRTOS.hpp"
 
 /********************************************* Local Variables **********************************************/    
-static SerialWifi serialWifi{ SERIAL_DEVICE_get( eSerialDevice::DEVICE_2 ) };
+static lib::LockableFreeRTOS lockable;
+static SerialWifi serialWifi{ SERIAL_DEVICE_get( eSerialDevice::DEVICE_2 ), lockable };
 
 /******************************************* Function Definitions *******************************************/   
 /**

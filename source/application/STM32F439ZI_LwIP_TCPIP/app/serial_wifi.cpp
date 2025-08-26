@@ -24,25 +24,38 @@
 void SerialWifi::initialize()
 {
    m_serialDevice.initialize();
+   m_lockable.initialize();
 }
 
 /**
  * @brief Send a message over the Wi-Fi serial device.
  * 
  * @param message The message to be sent.
- * @param flushRxBefore Whether to flush the RX buffer before sending the message. Default is true.
+ * @param flushRxBuffer Whether to flush the Rx buffer before sending the message. Default is true.
  */
-void SerialWifi::sendWait( const char* message, bool flushRxBefore /* = true */ )
+void SerialWifi::sendWait( const char* message, bool flushRxBuffer /* = true */, bool expectResponse /* = true */ )
 {
-   if ( flushRxBefore )
+   lib::lock_guard lock( m_lockable );
+
+   if ( expectResponse && m_waitingforResponse )
+   {
+      LOGGING( "SerialWifi: Send seq. not allowed while waiting for response" );
+      return;
+   }
+
+   if ( flushRxBuffer )
    {
       m_serialDevice.flushRxBuffer();
    }
+
+   m_waitingforResponse = true;
 
    auto result = m_serialDevice.sendDataAsync( reinterpret_cast<const uint8_t*>( message ), strlen( message ) );
    if ( result != LibErrorCodes::eOK )
    {
       LOGGING( "SerialWifi: Send failed, ret=0x%lx", result );
+      m_waitingforResponse = false;
+      return;
    }
 
    result = m_serialDevice.waitSendComplete( 1000 );
@@ -59,10 +72,12 @@ void SerialWifi::sendWait( const char* message, bool flushRxBefore /* = true */ 
  */
 void SerialWifi::waitResponse( uint32_t timeout_ms )
 {
+   lib::lock_guard lock( m_lockable );
+
    uint8_t rxBuffer[128];
    ZERO_BUFFER( rxBuffer );
    
-   auto tickStart = LIB_COMMON_getTickMS();
+   const auto tickStarted = LIB_COMMON_getTickMS();
    
    auto i = 0;
    auto timeoutRemaining = timeout_ms;
@@ -85,9 +100,10 @@ void SerialWifi::waitResponse( uint32_t timeout_ms )
          break;
       }
 
-      const auto elapsed = LIB_COMMON_getTickMS() - tickStart;
+      const auto elapsed = LIB_COMMON_getTickMS() - tickStarted;
       timeoutRemaining = timeout_ms - elapsed;
    }
 
    LOGGING( "SerialWifi: Response: %s", rxBuffer );
+   m_waitingforResponse = false;
 }

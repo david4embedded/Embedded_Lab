@@ -13,6 +13,7 @@
 
 /************************************************ Includes **************************************************/
 #include "serial_device.h"
+#include "ILockable.hpp"
 
 /************************************************* Types ****************************************************/
 /**
@@ -23,15 +24,18 @@ class SerialWifi
 public:
    constexpr static size_t TX_BUFFER_SIZE = 128;
 
-   SerialWifi( lib::SerialDevice& serialDevice ) 
-   : m_serialDevice( serialDevice ) 
+   SerialWifi( lib::SerialDevice& serialDevice, lib::ILockable& lockable ) 
+   : m_serialDevice( serialDevice )
+   , m_lockable( lockable ) 
    { }
    ~SerialWifi() = default;
 
    void  initialize   ( );
-   void  sendWait     ( const char* message, bool flushRxBefore = true );
+   void  sendWait     ( const char* message, bool flushRxBuffer = true, bool expectResponse = true );
    void  waitResponse ( uint32_t timeout_ms );
 
 private:
    lib::SerialDevice& m_serialDevice;
+   lib::ILockable&    m_lockable;
+   bool               m_waitingforResponse{ false };
 };
