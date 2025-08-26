@@ -124,7 +124,7 @@ static void taskLogging( void const * argument )
 
          auto& serialDevice = SERIAL_DEVICE_get( eSerialDevice::DEVICE_1 );
 
-         serialDevice.sendDataAsync( txBuffer, countRead );
+         serialDevice.sendAsync( txBuffer, countRead );
          serialDevice.waitSendComplete( 2000 );
       }
    }

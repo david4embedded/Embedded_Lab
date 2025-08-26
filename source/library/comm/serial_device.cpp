@@ -49,7 +49,7 @@ ErrorCode SerialDevice::initialize()
  * @param length Length of the data to be sent.
  * @return ErrorCode 
  */
-ErrorCode SerialDevice::sendDataAsync( const uint8_t* data, size_t length )
+ErrorCode SerialDevice::sendAsync( const uint8_t* data, size_t length )
 {
    lib::lock_guard lock( m_lockable );
 

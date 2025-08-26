@@ -50,7 +50,7 @@ void SerialWifi::sendWait( const char* message, bool flushRxBuffer /* = true */,
 
    m_waitingforResponse = true;
 
-   auto result = m_serialDevice.sendDataAsync( reinterpret_cast<const uint8_t*>( message ), strlen( message ) );
+   auto result = m_serialDevice.sendAsync( reinterpret_cast<const uint8_t*>( message ), strlen( message ) );
    if ( result != LibErrorCodes::eOK )
    {
       LOGGING( "SerialWifi: Send failed, ret=0x%lx", result );
