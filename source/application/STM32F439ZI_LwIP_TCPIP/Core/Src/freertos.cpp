@@ -111,13 +111,13 @@ static void taskCli( void const * argument )
 {
    PARAM_NOT_USED( argument );
 
-   LOGGING( "CLI Task Started..." );
+   LOGGING( "CLI: Task Started..." );
 
    auto& cli = lib::CLI::getInstance();
    auto result = cli.initialize();
    if ( result != LibErrorCodes::eOK )
    {
-      LOGGING( "CLI initialization failed, ret=0x%lx", result );
+      LOGGING( "CLI: initialization failed, ret=0x%lx", result );
       return;
    }
 
@@ -127,7 +127,6 @@ static void taskCli( void const * argument )
    {
       if ( cli.getNewCommandLine( buffer, sizeof( buffer ), 30000 ) == LibErrorCodes::eOK )
       {
-         LOGGING( "Received command line: %s", buffer );
          cli.processInput( buffer );
       }
 

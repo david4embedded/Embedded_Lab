@@ -23,6 +23,7 @@
 constexpr size_t CLI_BUFFER_SIZE = 128;
 
 /******************************************* Function Declarations ******************************************/    
+static void showArgs          ( int argc, char* argv[] );
 static void commandTest       ( int argc, char* argv[] );
 static void commandSerialWifi ( int argc, char* argv[] );
 
@@ -51,6 +52,22 @@ CLI& CLI::getInstance()
 } /* namespace lib */
 
 /**
+ * @brief Show the command-line arguments
+ * 
+ * @param argc the number of arguments
+ * @param argv the argument values
+ */
+static void showArgs( int argc, char* argv[] )
+{
+   LOGGING( "CLI: [%s] command executed", argv[0] );
+
+   for( int i = 0; i < argc; ++i )
+   {
+      LOGGING( "CLI: arg[%d]: %s", i, argv[i] );
+   }
+}
+
+/**
  * @brief Process the 'test' command
  * 
  * @param argc the number of arguments
@@ -58,12 +75,7 @@ CLI& CLI::getInstance()
  */
 static void commandTest( int argc, char* argv[] )
 {
-   LOGGING( "CLI: 'test' command executed" );
-
-   for( int i = 0; i < argc; ++i )
-   {
-      LOGGING( "CLI: arg[%d]: %s", i, argv[i] );
-   }
+   showArgs( argc, argv );
 }
 
 /**
@@ -74,7 +86,7 @@ static void commandTest( int argc, char* argv[] )
  */
 static void commandSerialWifi( int argc, char* argv[] )
 {
-   LOGGING( "CLI: 'wifi' command executed" );
+   showArgs( argc, argv );
 
    if ( argc < 3 )
    {
@@ -89,7 +101,7 @@ static void commandSerialWifi( int argc, char* argv[] )
    auto& serialWifi = SERIAL_WIFI_get();
    serialWifi.sendWait( reinterpret_cast<const char*>(buffer) );
 
-   LOGGING( "CLI: Wait for %dms for response", timeout_ms ); 
+   LOGGING( "CLI: Wait for [%d]ms for response", timeout_ms ); 
 
    serialWifi.waitResponse( timeout_ms );
 }
