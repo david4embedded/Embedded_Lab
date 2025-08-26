@@ -49,6 +49,7 @@ public:
    ErrorCode   initialize           ( );
 
    //!< For Tx
+   ErrorCode   sendWait             ( const uint8_t* data, size_t length, uint32_t timeout_ms );
    ErrorCode   sendAsync            ( const uint8_t* data, size_t length );
    ErrorCode   waitSendComplete     ( uint32_t timeout_ms );
    void        notifySendComplete   ( );

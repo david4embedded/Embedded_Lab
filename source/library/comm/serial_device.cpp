@@ -41,6 +41,24 @@ ErrorCode SerialDevice::initialize()
 }
 
 /**
+ * @brief Send data over UART and wait for completion.
+ * 
+ * @param data Pointer to the data to be sent.
+ * @param length Length of the data to be sent.
+ * @param timeout_ms Timeout in milliseconds.
+ * @return ErrorCode 
+ */
+ErrorCode SerialDevice::sendWait( const uint8_t* data, size_t length, uint32_t timeout_ms )
+{
+   auto result = sendAsync( data, length );
+   if ( result != LibErrorCodes::eOK )
+   {
+      return result;
+   }
+   return waitSendComplete( timeout_ms );
+}
+
+/**
  * @brief Send data over UART.
  * @details This function is non-blocking and returns immediately after initiating the send operation.
  *          However, sending is allowed only if the previous sending has completed, which is confirmed through the waitSendComplete() function.
