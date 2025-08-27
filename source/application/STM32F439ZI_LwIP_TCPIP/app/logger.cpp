@@ -23,9 +23,9 @@
 #include "task.h"
 #include "cmsis_os.h"
 #include "common.h"
-#include "lockable_FreeRTOS.hpp"
-#include "semaphore_FreeRTOS.h"
-#include "lockguard.hpp"
+#include "lockable_freertos.h"
+#include "semaphore_freertos.h"
+#include "lockguard.h"
 #include "ring_buffer.h"
 #include "config_serial_device.h"
 #include <string.h>

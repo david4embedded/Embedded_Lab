@@ -14,9 +14,9 @@
 /************************************************ Includes **************************************************/
 #include "serial_device.h"
 #include "ring_buffer.h"
-#include "ILockable.hpp"
-#include "lockguard.hpp"
-#include "ISemaphore.h"
+#include "lockable_interface.h"
+#include "semaphore_interface.h"
+#include "lockguard.h"
 #include <stddef.h>
 
 /************************************************* Types ****************************************************/

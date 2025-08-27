@@ -14,7 +14,7 @@
 #include "serial_wifi.h"
 #include "config_serial_wifi.h"
 #include "config_serial_device.h"
-#include "lockable_FreeRTOS.hpp"
+#include "lockable_freertos.h"
 
 /********************************************* Local Variables **********************************************/    
 static lib::LockableFreeRTOS lockable;

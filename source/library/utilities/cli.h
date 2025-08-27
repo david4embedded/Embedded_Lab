@@ -16,7 +16,7 @@
 
 /************************************************ Includes **************************************************/ 
 #include "ring_buffer.h"
-#include "ISemaphore.h"
+#include "semaphore_interface.h"
 #include "error_codes_lib.h"
 #include <stdint.h>
 #include <stddef.h>

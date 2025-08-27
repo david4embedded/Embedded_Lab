@@ -13,7 +13,7 @@
 /************************************************ Includes **************************************************/ 
 #include "config_cli.h"
 #include "cli.h"
-#include "semaphore_FreeRTOS.h"
+#include "semaphore_freertos.h"
 #include "common.h"
 #include "cmsis_os.h"
 #include "config_serial_wifi.h"

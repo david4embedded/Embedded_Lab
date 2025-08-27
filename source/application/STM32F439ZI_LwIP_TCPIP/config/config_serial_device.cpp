@@ -16,8 +16,8 @@
 #include "config_serial_device.h"
 #include "config_cli.h"
 #include "config_serial_wifi.h"
-#include "lockable_FreeRTOS.hpp"
-#include "semaphore_FreeRTOS.h"
+#include "lockable_freertos.h"
+#include "semaphore_freertos.h"
 #include "usart.h"
 
 /************************************************* Consts ***************************************************/
