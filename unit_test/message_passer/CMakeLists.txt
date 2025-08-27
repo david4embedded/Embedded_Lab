@@ -8,7 +8,7 @@ add_executable(
     message_passer_test
     message_passer_test.cpp
     ../../source/library/comm/message_passer.cpp
-    ../mocks/mock_FreeRTOS.cpp
+    ../mocks/mock_freertos.cpp
 )
 
 # Include the GoogleTest module to enable commands like gtest_discover_tests.

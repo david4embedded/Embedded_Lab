@@ -17,7 +17,7 @@
 
 /************************************************** Includes ************************************************/
 #include "Utilities.h"
-#include "ErrorCodes.h"
+#include "error_codes.h"
 #include "FreeRTOS.h"
 #include "task.h"
 #include "semphr.h"

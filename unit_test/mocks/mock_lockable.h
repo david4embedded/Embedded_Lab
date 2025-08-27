@@ -1,11 +1,11 @@
 /************************************************************************************************************
  * 
- * @file mock_Semaphore.h
- * @brief This file contains the implementation of ISemaphore as a mock used in unit tests.
+ * @file mock_Lockable.h
+ * @brief This file contains the declaration of a mock class for lockable resources used in unit tests.
  * 
  * @author Sungsu Kim
  * @copyright 2025 Sungsu Kim
- * @date 2025-08-20
+ * @date 2025-07-27
  * @version 1.0
  * 
  ************************************************************************************************************/
@@ -13,17 +13,17 @@
 #pragma once
 
 //************************************************** Includes ************************************************
-#include "ISemaphore.h"
+#include "lockable_interface.h"
 #include "gmock/gmock.h"
 
 //**************************************************** Types *************************************************
-class SemaphoreMock : public lib::ISemaphore
+class LockableMock : public lib::ILockable
 {
 public:
-	MOCK_METHOD( ErrorCode, initialize, ( uint32_t maxCount, uint32_t initialCount ) );
-	MOCK_METHOD( void, put, ( ) );
-	MOCK_METHOD( void, putISR, ( ) );
-	MOCK_METHOD( ErrorCode, get, ( uint32_t timeout_ms ) );
+    MOCK_METHOD( bool, initialize, ( ) );
+    MOCK_METHOD( void, lock, () );
+    MOCK_METHOD( bool, try_lock, ( uint32_t timeout_ms ) );
+    MOCK_METHOD( void, unlock, () );
 };
 
-extern SemaphoreMock* g_mockSemaphore;
+extern LockableMock* g_mockLockable;
