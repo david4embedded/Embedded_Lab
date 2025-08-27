@@ -12,7 +12,7 @@
 
 #pragma once
 
-#include "ILockable.hpp"
+#include "lockable_interface.h"
 #include "FreeRTOS.h"
 #include "semphr.h"
 #include <cstdint>
