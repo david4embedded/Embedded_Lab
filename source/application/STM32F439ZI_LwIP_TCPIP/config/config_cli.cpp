@@ -86,8 +86,6 @@ static void commandTest( int argc, char* argv[] )
  */
 static void commandSerialWifi( int argc, char* argv[] )
 {
-   showArgs( argc, argv );
-
    if ( argc < 3 )
    {
       LOGGING( "CLI: 'wifi' command requires at least 2 arguments" );
