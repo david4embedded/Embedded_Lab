@@ -39,6 +39,7 @@ static struct tcp_pcb   *echoServerPcb;
 static struct tcp_pcb   *clientPcb;
 static osThreadId       defaultTaskHandle;
 static osThreadId       cliTaskHandle;
+static osThreadId       serialWifiTaskHandle;
 
 static StaticTask_t     xIdleTaskTCBBuffer;
 static StackType_t      xIdleStack[configMINIMAL_STACK_SIZE];
@@ -66,8 +67,11 @@ void MX_FREERTOS_Init(void)
    const osThreadDef_t defaultTaskDef = { const_cast<char*>( "defaultTask" ), taskDefault, osPriorityNormal, 0, configMINIMAL_STACK_SIZE, nullptr, nullptr };
    defaultTaskHandle = osThreadCreate( &defaultTaskDef, nullptr );
    
-   const osThreadDef_t cliTaskDef = { const_cast<char*>( "cliTask" ), taskCli, osPriorityNormal, 0, 512, nullptr, nullptr };
+   const osThreadDef_t cliTaskDef = { const_cast<char*>( "cliTask" ), taskCli, osPriorityNormal, 0, configMINIMAL_STACK_SIZE, nullptr, nullptr };
    cliTaskHandle = osThreadCreate( &cliTaskDef, nullptr );
+
+   const osThreadDef_t serialWifiTaskDef = { const_cast<char*>( "serialWifiTask" ), SerialWifi::runTask, osPriorityNormal, 0, configMINIMAL_STACK_SIZE, nullptr, nullptr };
+   serialWifiTaskHandle = osThreadCreate( &serialWifiTaskDef, &SERIAL_WIFI_get() );
 
    LOGGER_init();
 }

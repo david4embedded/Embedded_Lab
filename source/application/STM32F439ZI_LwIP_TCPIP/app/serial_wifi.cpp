@@ -15,6 +15,7 @@
 #include "semaphore_FreeRTOS.h"
 #include "usart.h"
 #include "common.h"
+#include "cmsis_os.h"
 #include <string.h>
 
 /******************************************* Function Definitions *******************************************/    
@@ -25,6 +26,38 @@ void SerialWifi::initialize()
 {
    m_serialDevice.initialize();
    m_lockable.initialize();
+
+   m_isInitialized = true;
+}
+
+/**
+ * @brief Run the Serial Wi-Fi task.
+ * 
+ * @param argument Pointer to the SerialWifi instance.
+ */
+void SerialWifi::runTask( void const* argument )
+{
+   auto& serialWifi = *reinterpret_cast<SerialWifi*>( const_cast<void*>( argument ) );
+
+   LOGGING( "SerialWiFi: Task Started..." );
+
+   while( serialWifi.isInitialized() )
+   {
+      osDelay( 10 );
+   }
+
+   for(;;)
+   {
+      uint8_t buffer[256] = {0};
+      auto result = serialWifi.waitAsyncResponse( buffer, sizeof( buffer ) );
+      if ( result )
+      {
+         size_t length = strlen( reinterpret_cast<const char*>( buffer ) );
+         LOGGING( "SerialWifi: Async Resp.(%d) [%s] ", length, buffer  );
+      }
+
+      osDelay( 10 );
+   }
 }
 
 /**
@@ -33,28 +66,19 @@ void SerialWifi::initialize()
  * @param message The message to be sent.
  * @param flushRxBuffer Whether to flush the Rx buffer before sending the message. Default is true.
  */
-void SerialWifi::sendWait( const char* message, bool flushRxBuffer /* = true */, bool expectResponse /* = true */ )
+void SerialWifi::sendWait( const char* message, bool flushRxBuffer /* = true */ )
 {
    lib::lock_guard lock( m_lockable );
-
-   if ( expectResponse && m_waitingforResponse )
-   {
-      LOGGING( "SerialWifi: Send seq. not allowed while waiting for response" );
-      return;
-   }
 
    if ( flushRxBuffer )
    {
       m_serialDevice.flushRxBuffer();
    }
 
-   m_waitingforResponse = true;
-
    auto result = m_serialDevice.sendAsync( reinterpret_cast<const uint8_t*>( message ), strlen( message ) );
    if ( result != LibErrorCodes::eOK )
    {
       LOGGING( "SerialWifi: Send failed, ret=0x%lx", result );
-      m_waitingforResponse = false;
       return;
    }
 
@@ -105,5 +129,60 @@ void SerialWifi::waitResponse( uint32_t timeout_ms )
    }
 
    LOGGING( "SerialWifi: Response: %s", rxBuffer );
-   m_waitingforResponse = false;
+}
+
+/**
+ * @brief Wait for an asynchronous response from the Wi-Fi serial device.
+ * @details This method waits until it receives a full message, and until then it will block on the SerialDevice's internal semaphore,
+ *          and thus this call should be called in a dedicated thread to handle async responses from the SerialWifi device.
+ * 
+ * @param buffer The buffer to store the response.
+ * @param bufferSize The size of the buffer.
+ * @return true if a response was received, false otherwise.
+ */
+bool SerialWifi::waitAsyncResponse( uint8_t* buffer, uint32_t bufferSize )     
+{
+   auto result = false;
+
+   const char* DELIMITER = "\n";
+   constexpr uint32_t WAIT_INFINITE = 0xFFFFFFFF;
+   size_t i = 0;
+
+   while( 1 )
+   {
+      uint8_t byte = 0;
+      const auto waitResult = m_serialDevice.getRxByte( byte, WAIT_INFINITE );
+      if ( waitResult != LibErrorCodes::eOK )
+      {
+         continue;
+      }
+
+      if ( i >= bufferSize )
+      {
+         LOGGING( "SerialWifi: Async Resp. buffer overflow", buffer );
+         break;
+      }
+
+      //!< Better to ignore this or it makes the parsing harder.
+      if ( byte == '\r' )
+      {
+         continue;
+      }
+
+      buffer[i++] = byte;
+
+      //!< Look for the delimiter for a line of response and finish.
+      auto* pos = strstr( reinterpret_cast<const char*>( buffer ), DELIMITER );
+      if ( pos != nullptr )
+      {
+         *pos = '\0';
+         const auto length = strlen( reinterpret_cast<const char*>( buffer ) );
+         
+         //!< Valid only if the length is not zero.
+         result = length > 0;
+         break;
+      }
+   }
+
+   return result;
 }

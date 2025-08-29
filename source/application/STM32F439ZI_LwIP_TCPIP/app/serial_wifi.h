@@ -30,12 +30,19 @@ public:
    { }
    ~SerialWifi() = default;
 
-   void  initialize   ( );
-   void  sendWait     ( const char* message, bool flushRxBuffer = true, bool expectResponse = true );
-   void  waitResponse ( uint32_t timeout_ms );
+   void  initialize        ( );
+   void  sendWait          ( const char* message, bool flushRxBuffer = true );
+   void  waitResponse      ( uint32_t timeout_ms );
+   bool  waitAsyncResponse ( uint8_t* buffer, uint32_t bufferSize );
+
+   //!< Task function
+   static void runTask     ( void const* argument );
+
+   //!< Useful getter
+   bool  isInitialized     ( ) const { return m_isInitialized; }
 
 private:
    lib::SerialDevice& m_serialDevice;
    lib::ILockable&    m_lockable;
-   bool               m_waitingforResponse{ false };
+   bool               m_isInitialized{ false };
 };
