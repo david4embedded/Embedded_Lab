@@ -62,6 +62,7 @@ void SerialWifi::runTask( void const* argument )
 
 /**
  * @brief Send a message over the Wi-Fi serial device.
+ * @details At the end of the message given, "<CR><LF>" will be appended as it's required by the protocol.
  * 
  * @param message The message to be sent.
  * @param flushRxBuffer Whether to flush the Rx buffer before sending the message. Default is true.
@@ -75,7 +76,13 @@ void SerialWifi::sendWait( const char* message, bool flushRxBuffer /* = true */ 
       m_serialDevice.flushRxBuffer();
    }
 
-   auto result = m_serialDevice.sendAsync( reinterpret_cast<const uint8_t*>( message ), strlen( message ) );
+   LOGGING( "SerialWifi: Send Msg.(%d) [%s]", strlen( message ), message );
+   
+   const char* DELIMITER = "\r\n";
+   char buffer[128] = {0};
+   snprintf( buffer, sizeof(buffer), "%s%s", message, DELIMITER );
+
+   auto result = m_serialDevice.sendAsync( reinterpret_cast<const uint8_t*>( buffer ), strlen( buffer ) );
    if ( result != LibErrorCodes::eOK )
    {
       LOGGING( "SerialWifi: Send failed, ret=0x%lx", result );
@@ -154,7 +161,6 @@ bool SerialWifi::waitAsyncResponse( uint8_t* buffer, uint32_t bufferSize )
       const auto waitResult = m_serialDevice.getRxByte( byte, WAIT_INFINITE );
       if ( waitResult != LibErrorCodes::eOK )
       {
-         LOGGING( "SerialWifi: Async Resp. wait failed, ret=0x%lx", waitResult );
          continue;
       }
 

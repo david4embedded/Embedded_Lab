@@ -92,12 +92,11 @@ static void commandSerialWifi( int argc, char* argv[] )
       return;
    }
 
-   char buffer[128] = {0};
-   snprintf( buffer, sizeof(buffer), "%s\r\n", argv[1] );
+   const auto* atCommand = argv[1];
    const auto timeout_ms = static_cast<uint32_t>( atoi( argv[2] ) );
 
    /* NOTE: Responses are checked through the SerialWifi thread 
     */
    auto& serialWifi = SERIAL_WIFI_get();
-   serialWifi.sendWait( reinterpret_cast<const char*>(buffer) );
+   serialWifi.sendWait( reinterpret_cast<const char*>(atCommand) );
 }
