@@ -154,6 +154,7 @@ bool SerialWifi::waitAsyncResponse( uint8_t* buffer, uint32_t bufferSize )
       const auto waitResult = m_serialDevice.getRxByte( byte, WAIT_INFINITE );
       if ( waitResult != LibErrorCodes::eOK )
       {
+         LOGGING( "SerialWifi: Async Resp. wait failed, ret=0x%lx", waitResult );
          continue;
       }
 
