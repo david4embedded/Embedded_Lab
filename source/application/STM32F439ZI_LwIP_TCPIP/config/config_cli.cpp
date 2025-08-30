@@ -86,14 +86,13 @@ static void commandTest( int argc, char* argv[] )
  */
 static void commandSerialWifi( int argc, char* argv[] )
 {
-   if ( argc < 3 )
+   if ( argc < 2 )
    {
       LOGGING( "CLI: 'wifi' command requires at least 2 arguments" );
       return;
    }
 
    const auto* atCommand = argv[1];
-   const auto timeout_ms = static_cast<uint32_t>( atoi( argv[2] ) );
 
    /* NOTE: Responses are checked through the SerialWifi thread 
     */
