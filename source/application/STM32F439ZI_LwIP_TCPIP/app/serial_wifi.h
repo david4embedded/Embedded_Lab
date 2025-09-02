@@ -54,7 +54,7 @@ private:
    {
       constexpr static size_t MAX_DATA_LENGTH = 128;     //!< MTU is 1500 bytes, but it's limited to 128 in the application
       uint8_t  linkId;
-      uint8_t  length;
+      uint8_t  length;                                   //!< Note that the length includes the delimiter
       char     data[MAX_DATA_LENGTH];
       IPData() { memset( this, 0, sizeof(IPData) ); }
    };
