@@ -97,5 +97,5 @@ static void commandSerialWifi( int argc, char* argv[] )
    /* NOTE: Responses are checked through the SerialWifi thread 
     */
    auto& serialWifi = SERIAL_WIFI_get();
-   serialWifi.sendWait( reinterpret_cast<const char*>(atCommand) );
+   (void)serialWifi.sendWait( reinterpret_cast<const char*>(atCommand) );
 }

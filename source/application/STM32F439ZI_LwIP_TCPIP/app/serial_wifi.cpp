@@ -51,7 +51,7 @@ void SerialWifi::runTask( void const* argument )
 
    for(;;)
    {
-      char message[256] = {0};
+      char message[IPData::MAX_DATA_LENGTH] = {0};
       auto result = serialWifi.waitAsyncResponse( message, sizeof( message ) );
       if ( !result )
       {
@@ -75,36 +75,39 @@ void SerialWifi::runTask( void const* argument )
  */
 bool SerialWifi::parseResponse( const char* message )
 {
+   auto result = true;
    const auto msgType = getMessageType( message );
 
    switch ( msgType )
    {
       case eRxMessageType::IP_DATA:
          LOGGING( "SerialWifi: Received IP Data" );
+         
          if ( convertToIpData( message, m_ipDataCached ) == true )
          {
             #if defined (ECHO_SERVER_TEST)
             LOGGING( "SerialWifi: Echo the message" );
-            char echoMessage[256] = {0};
+            char echoMessage[IPData::MAX_DATA_LENGTH] = {0};
             snprintf( echoMessage, sizeof(echoMessage), "AT+CIPSEND=%d,%d", m_ipDataCached.linkId, m_ipDataCached.length );
-            sendWait( echoMessage );
+            result = sendWait( echoMessage );
             #endif
          }
          break;
 
       case eRxMessageType::IP_DATA_SEND_READY:
          LOGGING( "SerialWifi: IP Data Send Ready" );
+         
          #if defined (ECHO_SERVER_TEST)
-         sendWait( m_ipDataCached.data );
+         result = sendWait( m_ipDataCached.data );
          #endif
          break;
 
       default:
-         return false;
+         result = false;
          break;
    }
 
-   return true;
+   return result;
 }
 
 /**
@@ -183,7 +186,7 @@ bool SerialWifi::convertToIpData( const char* message, IPData& ipData )
  * @param message The message to be sent.
  * @param flushRxBuffer Whether to flush the Rx buffer before sending the message. Default is true.
  */
-void SerialWifi::sendWait( const char* message, bool flushRxBuffer /* = true */ )
+bool SerialWifi::sendWait( const char* message, bool flushRxBuffer /* = true */ )
 {
    lib::lock_guard lock( m_lockable );
 
@@ -195,21 +198,24 @@ void SerialWifi::sendWait( const char* message, bool flushRxBuffer /* = true */ 
    LOGGING( "SerialWifi: Send [%d] [%s]", strlen( message ), message );
    
    const char* DELIMITER = "\r\n";
-   char buffer[128] = {0};
+   char buffer[IPData::MAX_DATA_LENGTH] = {0};
    snprintf( buffer, sizeof(buffer), "%s%s", message, DELIMITER );
 
    auto result = m_serialDevice.sendAsync( reinterpret_cast<const uint8_t*>( buffer ), strlen( buffer ) );
    if ( result != LibErrorCodes::eOK )
    {
       LOGGING( "SerialWifi: Send failed, ret=0x%lx", result );
-      return;
+      return false;
    }
 
    result = m_serialDevice.waitSendComplete( 1000 );
    if ( result != LibErrorCodes::eOK )
    {
       LOGGING( "SerialWifi: Wait failed, ret=0x%lx", result );
+      return false;
    }
+
+   return true;
 }
 
 /**
@@ -231,7 +237,7 @@ void SerialWifi::sendAsync( const char* message, bool flushRxBuffer /* = true */
    LOGGING( "SerialWifi: Send Async.(%d) [%s]", strlen( message ), message );
    
    const char* DELIMITER = "\r\n";
-   char buffer[128] = {0};
+   char buffer[IPData::MAX_DATA_LENGTH] = {0};
    snprintf( buffer, sizeof(buffer), "%s%s", message, DELIMITER );
 
    auto result = m_serialDevice.sendAsync( reinterpret_cast<const uint8_t*>( buffer ), strlen( buffer ) );

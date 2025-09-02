@@ -31,7 +31,7 @@ public:
    ~SerialWifi() = default;
 
    void  initialize           ( );
-   void  sendWait             ( const char* message, bool flushRxBuffer = true );
+   bool  sendWait             ( const char* message, bool flushRxBuffer = true );
    void  sendAsync            ( const char* message, bool flushRxBuffer = true );
    bool  waitSendComplete     ( );
    void  waitResponse         ( uint32_t timeout_ms );
@@ -44,6 +44,9 @@ public:
    bool  isInitialized        ( ) const { return m_isInitialized; }
 
 private:
+   /**
+    * @brief Enumeration of received message types.
+    */
    enum class eRxMessageType
    {
       IP_DATA,
