@@ -60,7 +60,7 @@ void SerialWifi::runTask( void const* argument )
       if ( !result )
       {
          size_t length = strlen( reinterpret_cast<const char*>( message ) );
-         LOGGING( "SerialWifi: Async Resp.(%d) [%s] ", length, message  );
+         LOGGING( "SerialWifi: Async Resp.[%d] [%s] ", length, message  );
       }
    }
 }
@@ -144,7 +144,7 @@ bool SerialWifi::convertToIpData( const char* message, IPData& ipData )
       *posEnd = '\0';
    }
 
-   LOGGING( "SerialWifi: IP Data - linkId: [%d], length: [%d], data: [%s]", ipData.linkId, ipData.length, ipData.data );
+   LOGGING( "SerialWifi: IP Data - linkId:[%d], length:[%d], data:[%s]", ipData.linkId, ipData.length, ipData.data );
    return true;
 }
 
@@ -164,7 +164,7 @@ void SerialWifi::sendWait( const char* message, bool flushRxBuffer /* = true */ 
       m_serialDevice.flushRxBuffer();
    }
 
-   LOGGING( "SerialWifi: Send(%d) [%s]", strlen( message ), message );
+   LOGGING( "SerialWifi: Send [%d] [%s]", strlen( message ), message );
    
    const char* DELIMITER = "\r\n";
    char buffer[128] = {0};
@@ -298,7 +298,7 @@ bool SerialWifi::waitAsyncResponse( char* buffer, uint32_t bufferSize )
          break;
       }
 
-      //!< Better to ignore this or it makes the parsing harder.
+      //!< Better to ignore this or it makes parsing harder.
       if ( byte == '\r' )
       {
          continue;
