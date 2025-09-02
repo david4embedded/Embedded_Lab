@@ -88,7 +88,7 @@ bool SerialWifi::parseResponse( const char* message )
       osDelay(10);
 
       char echoMessage[256] = {0};
-      snprintf( echoMessage, sizeof(echoMessage), "AT+CIPSEND,%d,%d", ipData.linkId, ipData.length );
+      snprintf( echoMessage, sizeof(echoMessage), "AT+CIPSEND=%d,%d", ipData.linkId, ipData.length );
       sendWait( echoMessage );
 #endif
 
