@@ -65,4 +65,5 @@ private:
    lib::SerialDevice&   m_serialDevice;
    lib::ILockable&      m_lockable;
    bool                 m_isInitialized{ false };
+   IPData               m_ipDataCached{};
 };

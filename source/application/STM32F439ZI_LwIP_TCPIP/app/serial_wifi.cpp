@@ -61,6 +61,7 @@ void SerialWifi::runTask( void const* argument )
       result = serialWifi.parseResponse( message );
       if ( !result )
       {
+         //!< Log if the message received was not parsed successfully.
          size_t length = strlen( reinterpret_cast<const char*>( message ) );
          LOGGING( "SerialWifi: Async Resp.[%d] [%s] ", length, message  );
       }
@@ -83,27 +84,20 @@ bool SerialWifi::parseResponse( const char* message )
    {
       LOGGING( "SerialWifi: Received IP Data" );
 
-      IPData ipData;
-      auto result = convertToIpData( message, ipData );
+      auto result = convertToIpData( message, m_ipDataCached );
 
 #if defined (ECHO_SERVER_TEST)
-      LOGGING( "SerialWifi: Sending AT cmd. for echo response" );
-      osDelay(10);
+      LOGGING( "SerialWifi: Echo the message" );
       char echoMessage[256] = {0};
-      snprintf( echoMessage, sizeof(echoMessage), "AT+CIPSEND=%d,%d", ipData.linkId, ipData.length );
+      snprintf( echoMessage, sizeof(echoMessage), "AT+CIPSEND=%d,%d", m_ipDataCached.linkId, m_ipDataCached.length );
       sendWait( echoMessage );
 #endif
       return true;
    }
-
-   if ( lambdaIsType( message, RX_MSG_TYPE_IP_DATA_SEND_READY ) )
+   else if ( lambdaIsType( message, RX_MSG_TYPE_IP_DATA_SEND_READY ) )
    {
-#if defined (ECHO_SERVER_TEST)      
-      LOGGING( "SerialWifi: Sending echo data" );
-      osDelay(10);   
-      char echoMessage[256] = {0};   
-      snprintf( echoMessage, sizeof(echoMessage), "hello" );
-      sendWait( echoMessage );
+#if defined (ECHO_SERVER_TEST)
+      sendWait( m_ipDataCached.data );
 #endif
       return true;
    }
@@ -319,15 +313,15 @@ bool SerialWifi::waitAsyncResponse( char* buffer, uint32_t bufferSize )
 
       buffer[i++] = byte;
 
-      // TEMP
+      //!< Complete the message for a new line if:
+      //!< the prompt is received, 
       if ( byte == '>' )
       {
-         LOGGING( "SerialWifi: Prompt received" );
          result = true;
          break;
       }
 
-      //!< Look for the delimiter for a line of response and finish.
+      //!< or the delimiter is found
       auto* pos = strstr( reinterpret_cast<const char*>( buffer ), DELIMITER );
       if ( pos != nullptr )
       {
