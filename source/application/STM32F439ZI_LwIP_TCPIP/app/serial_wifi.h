@@ -30,18 +30,18 @@ public:
    { }
    ~SerialWifi() = default;
 
-   void  initialize           ( );
-   bool  sendWait             ( const char* message, bool flushRxBuffer = true );
-   void  sendAsync            ( const char* message, bool flushRxBuffer = true );
-   bool  waitSendComplete     ( );
-   void  waitResponse         ( uint32_t timeout_ms );
-   bool  waitAsyncResponse    ( char* buffer, uint32_t bufferSize );
+   void        initialize           ( );
+   bool        sendWait             ( const char* message, bool flushRxBuffer = true );
+   void        sendAsync            ( const char* message, bool flushRxBuffer = true );
+   bool        waitSendComplete     ( );
+   void        waitResponse         ( uint32_t timeout_ms );
+   bool        waitAsyncResponse    ( char* buffer, uint32_t bufferSize );
 
    //!< Task function
-   static void runTask        ( void const* argument );
+   static void runTask              ( void const* argument );
 
    //!< Useful getter
-   bool  isInitialized        ( ) const { return m_isInitialized; }
+   bool        isInitialized        ( ) const { return m_isInitialized; }
 
 private:
    /**
@@ -69,9 +69,9 @@ private:
       IPData() { memset( this, 0, sizeof(IPData) ); }
    };
 
-   bool           parseResponse        ( const char* message );
-   eRxMessageType getMessageType       ( const char* message );
-   bool           convertToIpData      ( const char* message, IPData& ipData );
+   bool                 parseResponse        ( const char* message );
+   eRxMessageType       getMessageType       ( const char* message );
+   bool                 convertToIpData      ( const char* message, IPData& ipData );
 
    lib::SerialDevice&   m_serialDevice;
    lib::ILockable&      m_lockable;
