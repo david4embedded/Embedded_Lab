@@ -75,35 +75,56 @@ void SerialWifi::runTask( void const* argument )
  */
 bool SerialWifi::parseResponse( const char* message )
 {
-   auto lambdaIsType = [] ( auto* message, auto* type )
+   const auto msgType = getMessageType( message );
+
+   switch ( msgType )
    {
-      return strstr( reinterpret_cast<const char*>( message ), type ) != nullptr;
-   };
+      case eRxMessageType::IP_DATA:
+         LOGGING( "SerialWifi: Received IP Data" );
+         if ( convertToIpData( message, m_ipDataCached ) == true )
+         {
+            #if defined (ECHO_SERVER_TEST)
+            LOGGING( "SerialWifi: Echo the message" );
+            char echoMessage[256] = {0};
+            snprintf( echoMessage, sizeof(echoMessage), "AT+CIPSEND=%d,%d", m_ipDataCached.linkId, m_ipDataCached.length );
+            sendWait( echoMessage );
+            #endif
+         }
+         break;
 
-   if ( lambdaIsType( message, RX_MSG_TYPE_IP_DATA ) )
-   {
-      LOGGING( "SerialWifi: Received IP Data" );
+      case eRxMessageType::IP_DATA_SEND_READY:
+         LOGGING( "SerialWifi: IP Data Send Ready" );
+         #if defined (ECHO_SERVER_TEST)
+         sendWait( m_ipDataCached.data );
+         #endif
+         break;
 
-      auto result = convertToIpData( message, m_ipDataCached );
-
-#if defined (ECHO_SERVER_TEST)
-      LOGGING( "SerialWifi: Echo the message" );
-      char echoMessage[256] = {0};
-      snprintf( echoMessage, sizeof(echoMessage), "AT+CIPSEND=%d,%d", m_ipDataCached.linkId, m_ipDataCached.length );
-      sendWait( echoMessage );
-#endif
-      return true;
+      default:
+         return false;
+         break;
    }
-   else if ( lambdaIsType( message, RX_MSG_TYPE_IP_DATA_SEND_READY ) )
+
+   return true;
+}
+
+/**
+ * @brief Get the type of message received from the Wi-Fi serial device.
+ * 
+ * @param message  The response message to parse.
+ * @return SerialWifi::eRxMessageType 
+ */
+SerialWifi::eRxMessageType SerialWifi::getMessageType( const char* message )
+{
+   if ( strstr( message, RX_MSG_TYPE_IP_DATA ) != nullptr )
    {
-#if defined (ECHO_SERVER_TEST)
-      sendWait( m_ipDataCached.data );
-#endif
-      return true;
+      return eRxMessageType::IP_DATA;
+   }
+   else if ( strstr( message, RX_MSG_TYPE_IP_DATA_SEND_READY ) != nullptr )
+   {
+      return eRxMessageType::IP_DATA_SEND_READY;
    }
 
-   //!< Return false if anything was not parsed successfully
-   return false;
+   return eRxMessageType::UNDEFINED;
 }
 
 /**

@@ -44,6 +44,13 @@ public:
    bool  isInitialized        ( ) const { return m_isInitialized; }
 
 private:
+   enum class eRxMessageType
+   {
+      IP_DATA,
+      IP_DATA_SEND_READY,
+      UNDEFINED
+   };
+
    constexpr static const char* RX_MSG_TYPE_IP_DATA = "+IPD";
    constexpr static const char* RX_MSG_TYPE_IP_DATA_SEND_READY = ">";
 
@@ -59,8 +66,9 @@ private:
       IPData() { memset( this, 0, sizeof(IPData) ); }
    };
 
-   bool  parseResponse        ( const char* message );
-   bool  convertToIpData      ( const char* message, IPData& ipData );
+   bool           parseResponse        ( const char* message );
+   eRxMessageType getMessageType       ( const char* message );
+   bool           convertToIpData      ( const char* message, IPData& ipData );
 
    lib::SerialDevice&   m_serialDevice;
    lib::ILockable&      m_lockable;
