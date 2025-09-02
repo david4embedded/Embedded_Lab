@@ -18,6 +18,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define ECHO_SERVER_TEST
+
 /******************************************* Function Definitions *******************************************/    
 /**
  * @brief Initialize the Wi-Fi serial device.
@@ -84,14 +86,25 @@ bool SerialWifi::parseResponse( const char* message )
       IPData ipData;
       auto result = convertToIpData( message, ipData );
 
-#if 1 // TEMP: Echo server test
+#if defined (ECHO_SERVER_TEST)
+      LOGGING( "SerialWifi: Sending AT cmd. for echo response" );
       osDelay(10);
-
       char echoMessage[256] = {0};
       snprintf( echoMessage, sizeof(echoMessage), "AT+CIPSEND=%d,%d", ipData.linkId, ipData.length );
       sendWait( echoMessage );
 #endif
+      return true;
+   }
 
+   if ( lambdaIsType( message, RX_MSG_TYPE_IP_DATA_SEND_READY ) )
+   {
+#if defined (ECHO_SERVER_TEST)      
+      LOGGING( "SerialWifi: Sending echo data" );
+      osDelay(10);   
+      char echoMessage[256] = {0};   
+      snprintf( echoMessage, sizeof(echoMessage), "hello" );
+      sendWait( echoMessage );
+#endif
       return true;
    }
 
@@ -310,6 +323,8 @@ bool SerialWifi::waitAsyncResponse( char* buffer, uint32_t bufferSize )
       if ( byte == '>' )
       {
          LOGGING( "SerialWifi: Prompt received" );
+         result = true;
+         break;
       }
 
       //!< Look for the delimiter for a line of response and finish.

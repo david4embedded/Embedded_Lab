@@ -45,6 +45,7 @@ public:
 
 private:
    constexpr static const char* RX_MSG_TYPE_IP_DATA = "+IPD";
+   constexpr static const char* RX_MSG_TYPE_IP_DATA_SEND_READY = ">";
 
    /**
     * @brief Structure representing IP data.
