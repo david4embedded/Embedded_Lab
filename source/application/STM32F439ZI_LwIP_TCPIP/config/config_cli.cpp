@@ -46,7 +46,7 @@ CLI& CLI::getInstance()
 {
    static char buffer[CLI_BUFFER_SIZE];
    static lib::Semaphore_FreeRTOS semaphoreCli;
-   static lib::CLI instance{ buffer, sizeof(buffer), '\r', cliCommands, sizeof(cliCommands) / sizeof(cliCommands[0]), semaphoreCli };
+   static lib::CLI instance{ buffer, sizeof(buffer), "\r\n", cliCommands, sizeof(cliCommands) / sizeof(cliCommands[0]), semaphoreCli };
    return instance; 
 }
 } /* namespace lib */
