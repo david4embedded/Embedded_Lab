@@ -12,11 +12,11 @@
 
 /************************************************ Includes **************************************************/
 #include "serial_wifi.h"
-#include "semaphore_FreeRTOS.h"
-#include "usart.h"
 #include "common.h"
 #include "cmsis_os.h"
 #include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 /******************************************* Function Definitions *******************************************/    
 /**
@@ -32,6 +32,7 @@ void SerialWifi::initialize()
 
 /**
  * @brief Run the Serial Wi-Fi task.
+ * @details This is a static method intended to be handed over to FreeRTOS kernel to run as a thread function.
  * 
  * @param argument Pointer to the SerialWifi instance.
  */
@@ -48,16 +49,103 @@ void SerialWifi::runTask( void const* argument )
 
    for(;;)
    {
-      uint8_t buffer[256] = {0};
-      auto result = serialWifi.waitAsyncResponse( buffer, sizeof( buffer ) );
-      if ( result )
+      char message[256] = {0};
+      auto result = serialWifi.waitAsyncResponse( message, sizeof( message ) );
+      if ( !result )
       {
-         size_t length = strlen( reinterpret_cast<const char*>( buffer ) );
-         LOGGING( "SerialWifi: Async Resp.(%d) [%s] ", length, buffer  );
+         continue;
       }
 
-      osDelay( 10 );
+      result = serialWifi.parseResponse( message );
+      if ( !result )
+      {
+         size_t length = strlen( reinterpret_cast<const char*>( message ) );
+         LOGGING( "SerialWifi: Async Resp.(%d) [%s] ", length, message  );
+      }
    }
+}
+
+/**
+ * @brief Parse the response message from the Wi-Fi serial device.
+ * 
+ * @param message The response message to parse.
+ */
+bool SerialWifi::parseResponse( const char* message )
+{
+   auto lambdaIsType = [] ( auto* message, auto* type )
+   {
+      return strstr( reinterpret_cast<const char*>( message ), type ) != nullptr;
+   };
+
+   if ( lambdaIsType( message, RX_MSG_TYPE_IP_DATA ) )
+   {
+      LOGGING( "SerialWifi: Received IP Data" );
+
+      IPData ipData;
+      auto result = convertToIpData( message, ipData );
+
+#if 1 // TEMP: Echo server test
+      osDelay(10);
+
+      char echoMessage[256] = {0};
+      snprintf( echoMessage, sizeof(echoMessage), "AT+CIPSEND,%d,%d", ipData.linkId, ipData.length );
+      sendWait( echoMessage );
+#endif
+
+      return true;
+   }
+
+   //!< Return false if anything was not parsed successfully
+   return false;
+}
+
+/**
+ * @brief Convert a message to IPData structure.
+ * 
+ * @param message a pointer to the message string
+ * @param ipData a reference to the IPData structure to populate
+ * @return true if the conversion was successful, false otherwise
+ */
+bool SerialWifi::convertToIpData( const char* message, IPData& ipData )
+{
+   const auto* posStart = strstr( message, RX_MSG_TYPE_IP_DATA );
+   if ( posStart == nullptr )
+   {
+      return false;
+   }
+
+   const auto* posLinkId = strchr( posStart, ',' );
+   if ( posLinkId == nullptr )
+   {
+      return false;
+   }
+
+   const auto* posLength = strchr( posLinkId + 1, ',' );
+   if ( posLength == nullptr )
+   {
+      return false;
+   }
+
+   const auto* posData = strchr( posLength + 1, ':' );
+   if ( posData == nullptr )
+   {
+      return false;
+   }
+
+   //!< Populate the IPData structure
+   ipData.linkId = static_cast<uint8_t>( atoi( posLinkId + 1 ) );
+   ipData.length = static_cast<uint8_t>( atoi( posLength + 1 ) );
+   strncpy( ipData.data, posData + 1, IPData::MAX_DATA_LENGTH - 1 );
+
+   //!< Set the byte to null terminator after the data
+   auto *posEnd = strchr( ipData.data, '0' );
+   if ( posEnd != nullptr )
+   {
+      *posEnd = '\0';
+   }
+
+   LOGGING( "SerialWifi: IP Data - linkId: [%d], length: [%d], data: [%s]", ipData.linkId, ipData.length, ipData.data );
+   return true;
 }
 
 /**
@@ -76,7 +164,7 @@ void SerialWifi::sendWait( const char* message, bool flushRxBuffer /* = true */ 
       m_serialDevice.flushRxBuffer();
    }
 
-   LOGGING( "SerialWifi: Send Msg.(%d) [%s]", strlen( message ), message );
+   LOGGING( "SerialWifi: Send(%d) [%s]", strlen( message ), message );
    
    const char* DELIMITER = "\r\n";
    char buffer[128] = {0};
@@ -94,6 +182,46 @@ void SerialWifi::sendWait( const char* message, bool flushRxBuffer /* = true */ 
    {
       LOGGING( "SerialWifi: Wait failed, ret=0x%lx", result );
    }
+}
+
+/**
+ * @brief Send a message over the Wi-Fi serial device asynchronously.
+ * @details This method will not block and will return immediately after queuing the message for sending.
+ * 
+ * @param message The message to be sent.
+ * @param flushRxBuffer Whether to flush the Rx buffer before sending the message. Default is true.
+ */
+void SerialWifi::sendAsync( const char* message, bool flushRxBuffer /* = true */ )
+{
+   lib::lock_guard lock( m_lockable );
+
+   if ( flushRxBuffer )
+   {
+      m_serialDevice.flushRxBuffer();
+   }
+
+   LOGGING( "SerialWifi: Send Async.(%d) [%s]", strlen( message ), message );
+   
+   const char* DELIMITER = "\r\n";
+   char buffer[128] = {0};
+   snprintf( buffer, sizeof(buffer), "%s%s", message, DELIMITER );
+
+   auto result = m_serialDevice.sendAsync( reinterpret_cast<const uint8_t*>( buffer ), strlen( buffer ) );
+   if ( result != LibErrorCodes::eOK )
+   {
+      LOGGING( "SerialWifi: Send failed, ret=0x%lx", result );
+      return;
+   }
+}
+
+/**
+ * @brief Wait for the send operation to complete.
+ * 
+ * @return true if the send operation completed successfully, false otherwise.
+ */
+bool SerialWifi::waitSendComplete( )
+{
+   return m_serialDevice.waitSendComplete( 1000 );
 }
 
 /**
@@ -147,7 +275,7 @@ void SerialWifi::waitResponse( uint32_t timeout_ms )
  * @param bufferSize The size of the buffer.
  * @return true if a response was received, false otherwise.
  */
-bool SerialWifi::waitAsyncResponse( uint8_t* buffer, uint32_t bufferSize )     
+bool SerialWifi::waitAsyncResponse( char* buffer, uint32_t bufferSize )     
 {
    auto result = false;
 
@@ -177,6 +305,12 @@ bool SerialWifi::waitAsyncResponse( uint8_t* buffer, uint32_t bufferSize )
       }
 
       buffer[i++] = byte;
+
+      // TEMP
+      if ( byte == '>' )
+      {
+         LOGGING( "SerialWifi: Prompt received" );
+      }
 
       //!< Look for the delimiter for a line of response and finish.
       auto* pos = strstr( reinterpret_cast<const char*>( buffer ), DELIMITER );

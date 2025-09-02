@@ -30,19 +30,38 @@ public:
    { }
    ~SerialWifi() = default;
 
-   void  initialize        ( );
-   void  sendWait          ( const char* message, bool flushRxBuffer = true );
-   void  waitResponse      ( uint32_t timeout_ms );
-   bool  waitAsyncResponse ( uint8_t* buffer, uint32_t bufferSize );
+   void  initialize           ( );
+   void  sendWait             ( const char* message, bool flushRxBuffer = true );
+   void  sendAsync            ( const char* message, bool flushRxBuffer = true );
+   bool  waitSendComplete     ( );
+   void  waitResponse         ( uint32_t timeout_ms );
+   bool  waitAsyncResponse    ( char* buffer, uint32_t bufferSize );
 
    //!< Task function
-   static void runTask     ( void const* argument );
+   static void runTask        ( void const* argument );
 
    //!< Useful getter
-   bool  isInitialized     ( ) const { return m_isInitialized; }
+   bool  isInitialized        ( ) const { return m_isInitialized; }
 
 private:
-   lib::SerialDevice& m_serialDevice;
-   lib::ILockable&    m_lockable;
-   bool               m_isInitialized{ false };
+   constexpr static const char* RX_MSG_TYPE_IP_DATA = "+IPD";
+
+   /**
+    * @brief Structure representing IP data.
+    */
+   struct IPData
+   {
+      constexpr static size_t MAX_DATA_LENGTH = 128;     //!< MTU is 1500 bytes, but it's limited to 128 in the application
+      uint8_t  linkId;
+      uint8_t  length;
+      char     data[MAX_DATA_LENGTH];
+      IPData() { memset( this, 0, sizeof(IPData) ); }
+   };
+
+   bool  parseResponse        ( const char* message );
+   bool  convertToIpData      ( const char* message, IPData& ipData );
+
+   lib::SerialDevice&   m_serialDevice;
+   lib::ILockable&      m_lockable;
+   bool                 m_isInitialized{ false };
 };
