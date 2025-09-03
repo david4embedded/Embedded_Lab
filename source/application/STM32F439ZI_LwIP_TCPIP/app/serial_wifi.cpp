@@ -190,21 +190,9 @@ bool SerialWifi::sendWait( const char* message, bool flushRxBuffer /* = true */ 
 {
    lib::lock_guard lock( m_lockable );
 
-   if ( flushRxBuffer )
+   auto result = sendAsyncPrivate( message, flushRxBuffer );
+   if ( result != true )
    {
-      m_serialDevice.flushRxBuffer();
-   }
-
-   LOGGING( "SerialWifi: Send [%d] [%s]", strlen( message ), message );
-   
-   const char* DELIMITER = "\r\n";
-   char buffer[IPData::MAX_DATA_LENGTH] = {0};
-   snprintf( buffer, sizeof(buffer), "%s%s", message, DELIMITER );
-
-   auto result = m_serialDevice.sendAsync( reinterpret_cast<const uint8_t*>( buffer ), strlen( buffer ) );
-   if ( result != LibErrorCodes::eOK )
-   {
-      LOGGING( "SerialWifi: Send failed, ret=0x%lx", result );
       return false;
    }
 
@@ -225,10 +213,22 @@ bool SerialWifi::sendWait( const char* message, bool flushRxBuffer /* = true */ 
  * @param message The message to be sent.
  * @param flushRxBuffer Whether to flush the Rx buffer before sending the message. Default is true.
  */
-void SerialWifi::sendAsync( const char* message, bool flushRxBuffer /* = true */ )
+bool SerialWifi::sendAsync( const char* message, bool flushRxBuffer /* = true */ )
 {
    lib::lock_guard lock( m_lockable );
 
+   return sendAsyncPrivate( message, flushRxBuffer );
+}
+
+/**
+ * @brief Send a message over the Wi-Fi serial device asynchronously.
+ * @details This method will not block and will return immediately after queuing the message for sending.
+ * 
+ * @param message The message to be sent.
+ * @param flushRxBuffer Whether to flush the Rx buffer before sending the message. Default is true.
+ */
+bool SerialWifi::sendAsyncPrivate( const char* message, bool flushRxBuffer /* = true */ )
+{
    if ( flushRxBuffer )
    {
       m_serialDevice.flushRxBuffer();
@@ -243,9 +243,11 @@ void SerialWifi::sendAsync( const char* message, bool flushRxBuffer /* = true */
    auto result = m_serialDevice.sendAsync( reinterpret_cast<const uint8_t*>( buffer ), strlen( buffer ) );
    if ( result != LibErrorCodes::eOK )
    {
-      LOGGING( "SerialWifi: Send failed, ret=0x%lx", result );
-      return;
+      LOGGING( "SerialWifi: sendAsyncPrivate failed, ret=0x%lx", result );
+      return false;
    }
+
+   return true;
 }
 
 /**

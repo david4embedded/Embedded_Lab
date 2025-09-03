@@ -32,7 +32,7 @@ public:
 
    void        initialize           ( );
    bool        sendWait             ( const char* message, bool flushRxBuffer = true );
-   void        sendAsync            ( const char* message, bool flushRxBuffer = true );
+   bool        sendAsync            ( const char* message, bool flushRxBuffer = true );
    bool        waitSendComplete     ( );
    void        waitResponse         ( uint32_t timeout_ms );
    bool        waitAsyncResponse    ( char* buffer, uint32_t bufferSize );
@@ -69,6 +69,8 @@ private:
       IPData() { memset( this, 0, sizeof(IPData) ); }
    };
 
+   //!< Messaging interface
+   bool                 sendAsyncPrivate     ( const char* message, bool flushRxBuffer = true );
    bool                 parseResponse        ( const char* message );
    eRxMessageType       getMessageType       ( const char* message );
    bool                 convertToIpData      ( const char* message, IPData& ipData );
