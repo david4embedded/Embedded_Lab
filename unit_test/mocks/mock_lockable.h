@@ -20,7 +20,7 @@
 class LockableMock : public lib::ILockable
 {
 public:
-    MOCK_METHOD( bool, initialize, ( ) );
+    MOCK_METHOD( ErrorCode, initialize, ( ) );
     MOCK_METHOD( void, lock, () );
     MOCK_METHOD( bool, try_lock, ( uint32_t timeout_ms ) );
     MOCK_METHOD( void, unlock, () );
