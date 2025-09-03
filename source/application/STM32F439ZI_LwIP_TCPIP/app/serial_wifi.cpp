@@ -26,6 +26,11 @@
  */
 void SerialWifi::initialize()
 {
+   if ( m_isInitialized )
+   {
+      return;
+   }
+
    m_serialDevice.initialize();
    m_lockable.initialize();
 
