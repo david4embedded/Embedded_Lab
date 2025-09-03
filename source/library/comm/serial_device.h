@@ -1,7 +1,7 @@
 /************************************************************************************************************
  * 
  * @file serial_device.h
- * @brief 
+ * @brief Header file for the SerialDevice class.
  *  
  * @author Sungsu Kim
  * @copyright 2025 Sungsu Kim
