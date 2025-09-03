@@ -58,13 +58,10 @@ void SerialWifi::runTask( void const* argument )
          continue;
       }
 
-      result = serialWifi.parseResponse( message );
-      if ( !result )
-      {
-         //!< Log if the message received was not parsed successfully.
-         size_t length = strlen( reinterpret_cast<const char*>( message ) );
-         LOGGING( "SerialWifi: Async Resp.[%d] [%s] ", length, message  );
-      }
+      const auto length = strlen( reinterpret_cast<const char*>( message ) );
+      LOGGING( "SerialWifi: Async Resp.[%d] [%s] ", length, message  );
+
+      (void)serialWifi.parseResponse( message );
    }
 }
 
