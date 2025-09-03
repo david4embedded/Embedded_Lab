@@ -31,8 +31,8 @@ public:
    ~SerialWifi() = default;
 
    void        initialize           ( );
-   bool        sendWait             ( const char* message, bool flushRxBuffer = true );
-   bool        sendAsync            ( const char* message, bool flushRxBuffer = true );
+   bool        sendWait             ( const char* message );
+   bool        sendAsync            ( const char* message );
    bool        waitSendComplete     ( );
    void        waitResponse         ( uint32_t timeout_ms );
    bool        waitAsyncResponse    ( char* buffer, uint32_t bufferSize );
@@ -70,7 +70,7 @@ private:
    };
 
    //!< Messaging interface
-   bool                 sendAsyncPrivate     ( const char* message, bool flushRxBuffer = true );
+   bool                 sendAsyncPrivate     ( const char* message );
    bool                 parseResponse        ( const char* message );
    eRxMessageType       getMessageType       ( const char* message );
    bool                 convertToIpData      ( const char* message, IPData& ipData );

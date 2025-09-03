@@ -184,13 +184,12 @@ bool SerialWifi::convertToIpData( const char* message, IPData& ipData )
  * @details At the end of the message given, "<CR><LF>" will be appended as it's required by the protocol.
  * 
  * @param message The message to be sent.
- * @param flushRxBuffer Whether to flush the Rx buffer before sending the message. Default is true.
  */
-bool SerialWifi::sendWait( const char* message, bool flushRxBuffer /* = true */ )
+bool SerialWifi::sendWait( const char* message )
 {
    lib::lock_guard lock( m_lockable );
 
-   auto result = sendAsyncPrivate( message, flushRxBuffer );
+   auto result = sendAsyncPrivate( message );
    if ( result != true )
    {
       return false;
@@ -211,13 +210,12 @@ bool SerialWifi::sendWait( const char* message, bool flushRxBuffer /* = true */ 
  * @details This method will not block and will return immediately after queuing the message for sending.
  * 
  * @param message The message to be sent.
- * @param flushRxBuffer Whether to flush the Rx buffer before sending the message. Default is true.
  */
-bool SerialWifi::sendAsync( const char* message, bool flushRxBuffer /* = true */ )
+bool SerialWifi::sendAsync( const char* message )
 {
    lib::lock_guard lock( m_lockable );
 
-   return sendAsyncPrivate( message, flushRxBuffer );
+   return sendAsyncPrivate( message );
 }
 
 /**
@@ -225,15 +223,9 @@ bool SerialWifi::sendAsync( const char* message, bool flushRxBuffer /* = true */
  * @details This method will not block and will return immediately after queuing the message for sending.
  * 
  * @param message The message to be sent.
- * @param flushRxBuffer Whether to flush the Rx buffer before sending the message. Default is true.
  */
-bool SerialWifi::sendAsyncPrivate( const char* message, bool flushRxBuffer /* = true */ )
+bool SerialWifi::sendAsyncPrivate( const char* message )
 {
-   if ( flushRxBuffer )
-   {
-      m_serialDevice.flushRxBuffer();
-   }
-
    LOGGING( "SerialWifi: Send Async.(%d) [%s]", strlen( message ), message );
    
    const char* DELIMITER = "\r\n";
