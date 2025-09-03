@@ -13,6 +13,7 @@
 #pragma once
 
 /************************************************** Includes *************************************************/
+#include "error_codes_lib.h"
 #include <stdint.h>
 
 namespace lib
@@ -26,7 +27,7 @@ public:
    virtual ~ILockable() = default;
 
    //!< Initialize the lockable resource
-   virtual bool initialize() = 0;
+   virtual ErrorCode initialize() = 0;
 
    //!< Lock the resource
    virtual void lock() = 0;

@@ -40,15 +40,15 @@ public:
    LockableFreeRTOS& operator=(LockableFreeRTOS&&) = delete;
 
    //!< Initialize the lockable resource
-   bool initialize() override
+   ErrorCode initialize() override
    {
       m_mutex = xSemaphoreCreateMutex();
       if ( m_mutex == nullptr ) 
       {
-         return false;
+         return LibErrorCodes::eLOCKABLE_INIT_FAILED;
       }
 
-      return true;
+      return LibErrorCodes::eOK;
    }
 
    //!< Lock the resource

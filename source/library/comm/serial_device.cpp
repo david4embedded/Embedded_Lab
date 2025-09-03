@@ -31,10 +31,25 @@ ErrorCode SerialDevice::initialize()
 
    ZERO_BUFFER( m_txBuffer );
 
-   m_lockable.initialize();
-   m_semTxComplete.initialize( 1, 0 );
-   m_semNewRxBytes.initialize( m_rxBuffer.size(), 0 );
-   
+   auto result = m_lockable.initialize();
+
+   if ( result != LibErrorCodes::eOK )
+   {
+      return result;
+   }
+
+   result = m_semTxComplete.initialize( 1, 0 );
+   if ( result != LibErrorCodes::eOK )
+   {
+      return result;
+   }
+
+   result = m_semNewRxBytes.initialize( m_rxBuffer.size(), 0 );
+   if ( result != LibErrorCodes::eOK )
+   {
+      return result;
+   }
+
    m_isInitialized = true;
 
    return LibErrorCodes::eOK;
