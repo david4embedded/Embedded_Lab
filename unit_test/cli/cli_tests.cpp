@@ -32,7 +32,7 @@ namespace lib
 CLI& CLI::getInstance()
 {
    static char buffer[128];
-   static lib::CLI instance{ buffer, sizeof( buffer ), '\r', cliCommands, sizeof( cliCommands ) / sizeof( cliCommands[0] ), *g_mockSemaphore };
+   static lib::CLI instance{ buffer, sizeof( buffer ), "\r\n", cliCommands, sizeof(cliCommands) / sizeof(cliCommands[0]), *g_mockSemaphore};
    return instance;
 }
 }
@@ -77,7 +77,7 @@ TEST_F( CliTest, test_putting_characters_and_getting_new_lines_work_properly )
 {
    auto& cli = lib::CLI::getInstance();
 
-   char str[] = "test arg1\rtest arg2\r";
+   char str[] = "test arg1\r\ntest arg2\r\n";
 
    EXPECT_CALL( m_semaphoreMock, putISR() ).Times( 2 );
 

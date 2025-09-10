@@ -16,7 +16,7 @@
 
 /************************************************ Includes **************************************************/ 
 #include "ring_buffer.h"
-#include "ISemaphore.h"
+#include "semaphore_interface.h"
 #include "error_codes_lib.h"
 #include <stdint.h>
 #include <stddef.h>
@@ -61,10 +61,11 @@ public:
 
 private:
    //!< Constructor
-   CLI( char buffer[], uint32_t sizeBuffer, char delimiter, CommandEntry commands[], size_t numCommands, lib::ISemaphore& semaphore );
+   CLI( char buffer[], uint32_t sizeBuffer, const char* delimiter, CommandEntry commands[], size_t numCommands, lib::ISemaphore& semaphore );
 
    lib::RingBuffer<char>   m_ringBuffer;           //!< buffer to hold all the incoming characters
-   const char              m_delimiter;            //!< A config. parameter to decide a new command line
+   const char*             m_delimiterStr;         //!< A config. parameter to decide a new command line
+   char                    m_delimiterEnd;
    const CommandEntry     *m_commandTable;
    const size_t            m_numCommands{ 0 };
    

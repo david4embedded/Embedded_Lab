@@ -15,8 +15,8 @@
 /************************************************** Includes *************************************************/
 #include "MQTTClient.h"
 #include "mqtt_client_port.h"
-#include "lockable_FreeRTOS.hpp"
-#include "lockguard.hpp"
+#include "lockable_freertos.h"
+#include "lockguard.h"
 #include <stdint.h>
 
 /************************************************** Types ****************************************************/

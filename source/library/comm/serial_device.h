@@ -1,0 +1,73 @@
+/************************************************************************************************************
+ * 
+ * @file serial_device.h
+ * @brief Header file for the SerialDevice class.
+ *  
+ * @author Sungsu Kim
+ * @copyright 2025 Sungsu Kim
+ * @date 2025-08-23
+ * @version 1.0
+ * 
+ ************************************************************************************************************/
+#pragma once
+
+/************************************************ Includes **************************************************/
+#include "serial_device.h"
+#include "ring_buffer.h"
+#include "lockable_interface.h"
+#include "semaphore_interface.h"
+#include "lockguard.h"
+#include <stddef.h>
+
+/************************************************* Types ****************************************************/
+namespace lib
+{
+/**
+ * @brief Serial device class for handling asynchronous communication.
+ * @details This class provides an interface for sending and receiving data over a serial connection.
+ *          For the actual transmision of bytes, it utilizes a Sender function, which should be provided by the user, e.g., a UART driver function.
+ *          For the reception of bytes, the pushRxByte method is expected to be called in a UART interrupt handler, so a rx byte can be pushed into the receive buffer in real time.
+ *          Then the user can retrieve the Rx bytes by calling the getRxByte method in an application thread.
+ */
+class SerialDevice
+{
+public:
+   constexpr static size_t TX_BUFFER_SIZE = 256;
+   using SendFunction = void(*)( const uint8_t* data, size_t length );
+
+   SerialDevice( SendFunction sender, uint8_t rxBuffer[], size_t rxBufferSize, lib::ILockable& lockable, lib::ISemaphore& semTxComplete, lib::ISemaphore& semNewRxBytes )
+   : m_sender( sender )
+   , m_rxBuffer( rxBuffer, rxBufferSize )
+   , m_lockable( lockable )
+   , m_semTxComplete( semTxComplete )
+   , m_semNewRxBytes( semNewRxBytes )
+   { }
+
+   ~SerialDevice()
+   { }
+
+   ErrorCode   initialize           ( );
+
+   //!< For Tx
+   ErrorCode   sendWait             ( const uint8_t* data, size_t length, uint32_t timeout_ms );
+   ErrorCode   sendAsync            ( const uint8_t* data, size_t length );
+   ErrorCode   waitSendComplete     ( uint32_t timeout_ms );
+   void        notifySendComplete   ( );
+
+   //!< For Rx
+   void        flushRxBuffer        ( );
+   ErrorCode   pushRxByte           ( uint8_t data );
+   ErrorCode   getRxByte            ( uint8_t& data, uint32_t timeout_ms );
+
+private:
+   SendFunction                     m_sender;
+   uint8_t                          m_txBuffer[TX_BUFFER_SIZE];
+   lib::RingBuffer<uint8_t>         m_rxBuffer;
+   lib::ILockable&                  m_lockable;
+   lib::ISemaphore&                 m_semTxComplete;
+   lib::ISemaphore&                 m_semNewRxBytes;
+
+   bool                             m_isInitialized{ false };
+   bool                             m_isSending{ false };
+};
+} /* namespace lib */

@@ -17,12 +17,12 @@
 
 /************************************************** Includes ************************************************/
 #include "Utilities.h"
-#include "ErrorCodes.h"
+#include "error_codes.h"
 #include "FreeRTOS.h"
 #include "task.h"
 #include "semphr.h"
-#include "ILockable.hpp"
-#include "Lockguard.hpp"
+#include "lockable_interface.h"
+#include "lockguard.h"
 #include <stdint.h>
 
 /************************************************** Types ***************************************************/

@@ -23,11 +23,11 @@
 #include "task.h"
 #include "cmsis_os.h"
 #include "common.h"
-#include "lockable_FreeRTOS.hpp"
-#include "semaphore_FreeRTOS.h"
-#include "lockguard.hpp"
+#include "lockable_freertos.h"
+#include "semaphore_freertos.h"
+#include "lockguard.h"
 #include "ring_buffer.h"
-#include "usart.h"
+#include "config_serial_device.h"
 #include <string.h>
 
 /************************************************ Consts ****************************************************/ 
@@ -42,7 +42,6 @@ static lib::RingBuffer<uint8_t>  logBuffer{ buffer, sizeof( buffer ) };
 static osThreadId                taskHandle;                //!< Handle for the logging task
 static lib::LockableFreeRTOS     lock;                      //!< Mutex for protecting access to the logging buffer
 static lib::Semaphore_FreeRTOS   semLogAvailable;           //!< Semaphore for log availability to signal the logging thread
-static lib::Semaphore_FreeRTOS   semTxComplete;             //!< Semaphore for UART transmission completion check to signal the logging thread
 static bool                      loggerInit = false;
 
 /****************************************** Function Declarations *******************************************/ 
@@ -56,9 +55,10 @@ static void writeLog    ( const char *message );
 void LOGGER_init( )
 {
    semLogAvailable.initialize( LOGGING_BUFFER_SIZE, 0 );    //!< it works as a counting semaphore
-   semTxComplete.initialize( 1, 0 );                        //!< it works as a binary semaphore
-
    lock.initialize();
+
+   auto& serialDevice = SERIAL_DEVICE_get( eSerialDevice::DEVICE_1 );
+   serialDevice.initialize();
 
    osThreadDef( loggingTask, taskLogging, osPriorityNormal, 0, 512 );
    taskHandle = osThreadCreate( osThread(loggingTask), nullptr );
@@ -122,9 +122,10 @@ static void taskLogging( void const * argument )
       {
          txBuffer[countRead] = '\0';
 
-         //!< Initiate the transmission and wait until is complete.
-         HAL_UART_Transmit_IT( &huart3, txBuffer, countRead );
-         semTxComplete.get( TIMEOUT_MS );
+         auto& serialDevice = SERIAL_DEVICE_get( eSerialDevice::DEVICE_1 );
+
+         serialDevice.sendAsync( txBuffer, countRead );
+         serialDevice.waitSendComplete( 2000 );
       }
    }
 }
@@ -143,18 +144,4 @@ extern "C" int _write( int file, char *ptr, int len )
 
    ptr[len] = '\0';
    writeLog( ptr );
-}
-
-/**
- * @brief UART transmission complete callback.
- * @details This function is called when the UART transmission is complete in the interrupt context through the HAL,
- *          and it signals the logging thread on the completion of the transmission.
- */
-extern "C" void HAL_UART_TxCpltCallback( UART_HandleTypeDef *huart )
-{
-   if ( huart->Instance == USART3 )
-   {
-      memset( buffer, 0, sizeof(buffer) );
-      semTxComplete.putISR();
-   }
 }

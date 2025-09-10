@@ -13,7 +13,7 @@
 #pragma once
 
 /************************************************ Includes **************************************************/ 
-#include "ISemaphore.h"
+#include "semaphore_interface.h"
 #include "FreeRTOS.h"
 #include "semphr.h"
 #include "queue.h"

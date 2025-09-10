@@ -1,6 +1,6 @@
 /************************************************************************************************************
  * 
- * @file ErrorCodes.h
+ * @file error_codes.h
  * @brief This file defines error codes used in the message passing system.
  * 
  * @author Sungsu Kim

@@ -27,14 +27,14 @@ namespace lib
  * @param numCommands number of commands in the array
  * @param semaphore semaphore used for signaling new command lines
  */
-CLI::CLI( char buffer[], uint32_t sizeBuffer, char delimiter, CommandEntry commands[], size_t numCommands, lib::ISemaphore& semaphore )
+CLI::CLI( char buffer[], uint32_t sizeBuffer, const char* delimiter, CommandEntry commands[], size_t numCommands, lib::ISemaphore& semaphore )
  : m_ringBuffer( buffer, sizeBuffer )
- , m_delimiter( delimiter )
+ , m_delimiterStr( delimiter )
  , m_commandTable( commands )
  , m_numCommands( numCommands )
  , m_semaphore( semaphore )
 {
-
+   m_delimiterEnd = m_delimiterStr[ strlen( m_delimiterStr ) - 1 ];
 }
 
 /**
@@ -70,7 +70,7 @@ ErrorCode CLI::getNewCommandLine( char* buffer, uint32_t sizeBuffer, uint32_t ti
            ( sizeBuffer-- ) )
    {
       *buffer++ = oneChar;
-      if ( oneChar == m_delimiter )
+      if ( oneChar == m_delimiterEnd )
       {
          break;
       }
@@ -142,7 +142,7 @@ int CLI::tokenize( char* input, char* argv[], int maxArgs )
          argv[argc++] = input;
 
          //!< Replace delimiter with null terminator, if found.
-         auto* end = strchr( input, m_delimiter );
+         auto* end = strstr( input, m_delimiterStr );
          if ( end != nullptr )
          {
             *end = '\0';
@@ -168,7 +168,7 @@ int CLI::tokenize( char* input, char* argv[], int maxArgs )
 void CLI::putCharIntoBuffer( char c )
 {
    auto result = m_ringBuffer.push(c);
-   if ( ( result == LibErrorCodes::eOK ) && ( c == m_delimiter ) )
+   if ( ( result == LibErrorCodes::eOK ) && ( c == m_delimiterEnd ) )
    {
       m_semaphore.putISR();
    }

@@ -1,20 +1,16 @@
-/* USER CODE BEGIN Header */
-/**
-  ******************************************************************************
-  * File Name          : freertos.c
-  * Description        : Code for freertos applications
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2025 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
-  */
+/************************************************************************************************************
+ * 
+ * @file freertos.cpp
+ * @brief This file contains the FreeRTOS initialization and task management functions.
+ * @details Also, this file includes callbacks, implementations required for libraries, 
+ *          and any application module initialization codes.
+ * 
+ * @author Sungsu Kim
+ * @copyright 2025 Sungsu Kim
+ * @date 2025-08-21
+ * @version 1.0
+ * 
+ ************************************************************************************************************/
 
 /************************************************** Includes **************************************************/
 #include "FreeRTOS.h"
@@ -25,8 +21,9 @@
 #include "lwip.h"
 #include "lwip/tcp.h"
 #include "stm32f4xx_nucleo_144.h"
-#include "cli.h"
 #include "logger.h"
+#include "config_cli.h"
+#include "config_serial_wifi.h"
 
 /************************************************** Consts ****************************************************/
 #define ECHO_SERVER_ADDR_0    192
@@ -42,6 +39,7 @@ static struct tcp_pcb   *echoServerPcb;
 static struct tcp_pcb   *clientPcb;
 static osThreadId       defaultTaskHandle;
 static osThreadId       cliTaskHandle;
+static osThreadId       serialWifiTaskHandle;
 
 static StaticTask_t     xIdleTaskTCBBuffer;
 static StackType_t      xIdleStack[configMINIMAL_STACK_SIZE];
@@ -69,8 +67,11 @@ void MX_FREERTOS_Init(void)
    const osThreadDef_t defaultTaskDef = { const_cast<char*>( "defaultTask" ), taskDefault, osPriorityNormal, 0, configMINIMAL_STACK_SIZE, nullptr, nullptr };
    defaultTaskHandle = osThreadCreate( &defaultTaskDef, nullptr );
    
-   const osThreadDef_t cliTaskDef = { const_cast<char*>( "cliTask" ), taskCli, osPriorityNormal, 0, 512, nullptr, nullptr };
+   const osThreadDef_t cliTaskDef = { const_cast<char*>( "cliTask" ), taskCli, osPriorityNormal, 0, configMINIMAL_STACK_SIZE, nullptr, nullptr };
    cliTaskHandle = osThreadCreate( &cliTaskDef, nullptr );
+
+   const osThreadDef_t serialWifiTaskDef = { const_cast<char*>( "serialWifiTask" ), SerialWifi::runTask, osPriorityNormal, 0, configMINIMAL_STACK_SIZE, nullptr, nullptr };
+   serialWifiTaskHandle = osThreadCreate( &serialWifiTaskDef, &SERIAL_WIFI_get() );
 
    LOGGER_init();
 }
@@ -97,11 +98,11 @@ static void taskDefault( void const * argument )
    MX_LWIP_Init();
    
    initTcpEchoServer();
+   SERIAL_WIFI_get().initialize();
 
    for(;;)
    {    
       osDelay(1000);
-      LOGGING( "Default Task" );
       BSP_LED_Toggle( LED_BLUE );
    }
 }
@@ -114,13 +115,13 @@ static void taskCli( void const * argument )
 {
    PARAM_NOT_USED( argument );
 
-   LOGGING( "CLI Task Started..." );
+   LOGGING( "CLI: Task Started..." );
 
    auto& cli = lib::CLI::getInstance();
    auto result = cli.initialize();
    if ( result != LibErrorCodes::eOK )
    {
-      LOGGING( "CLI initialization failed, ret=0x%lx", result );
+      LOGGING( "CLI: initialization failed, ret=0x%lx", result );
       return;
    }
 
@@ -130,7 +131,6 @@ static void taskCli( void const * argument )
    {
       if ( cli.getNewCommandLine( buffer, sizeof( buffer ), 30000 ) == LibErrorCodes::eOK )
       {
-         LOGGING( "Received command line: %s", buffer );
          cli.processInput( buffer );
       }
 
@@ -256,5 +256,3 @@ void vApplicationStackOverflowHook( xTaskHandle xTask, signed char *pcTaskName )
    PARAM_NOT_USED( xTask );
    PARAM_NOT_USED( pcTaskName ); 
 }
-
-
