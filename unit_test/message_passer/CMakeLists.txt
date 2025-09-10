@@ -23,9 +23,9 @@ target_include_directories(message_passer_test PRIVATE
 
     # Common project and library include paths
     ../../source/common
+    ../../source/library
     ../../source/library/RTOS
     ../../source/library/comm
-    ../../app/library
 
     # FreeRTOS-related include paths
     ../../thirdparty/FreeRTOS/FreeRTOS
