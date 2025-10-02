@@ -5,6 +5,8 @@
 * The project supports on CLI interface
   * one bi-polar stepping motor 
   * one LED on the nucleo board
+* The project utilizes embassy_stm32, embassy_executor, and so on, and it supports async tasks to execute multiple tasks at the same time using the async framework. 
+* For example, while executing the stepper CLI command, it can also service the ADC CLI command at the same time.
 
 ## 2. Project Setup
 * TBD
