@@ -107,23 +107,28 @@ async fn cli_task(mut rx: UartRx<'static, Async>) {
         if let Some(args) = cli::get_args(buffer[0], &mut cmd_buffer) {            
             if let Some(command) = args.get(0) {
                 match command.as_str() {
-                    "led"  => { 
+                     "help" => { 
+                        cli::print_help().await; 
+                     }
+
+                     "led"  => { 
                         if let Some(period) = args.get(1).and_then(|s| s.parse::<u64>().ok()) {
                             *LED_PERIOD_MS.lock().await = period;
                         }
-                    }
-                    "stepper" => {
+                     }
+                     "stepper" => {
                         if let Some(steps) = args.get(1).and_then(|s| s.parse::<f32>().ok()) {
                             let speed_percent = args.get(2).and_then(|s| s.parse::<f32>().ok()).unwrap_or(100f32);
                             *STEPPER_PARAMS.lock().await = (steps, speed_percent);
                         }
-                    }
-                    "adc" => {
+                     }
+                     "adc" => {
                         let interval = args.get(1).and_then(|s| s.parse::<u64>().ok()).unwrap_or(0);
                         *ADC_READ.lock().await = interval;
-                    }
-                    _ => { print!("Undefined command: {}", command); }
-                }
+                     }
+               
+                     _ => { print!("Undefined command: {}", command); }
+               }
             }
         }
     }

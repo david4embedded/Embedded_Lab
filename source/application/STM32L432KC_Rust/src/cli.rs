@@ -87,6 +87,23 @@ pub async fn print_welcome() {
 }
 
 /**
+ * @brief Print help message to the serial port.
+ */
+pub async fn print_help() {
+   print!("\r\n");
+   print!("Available commands:\r\n");
+   print!("  led <period_ms>\r\n");
+   print!("    - Toggle the LED at the specified interval in ms\r\n");
+   print!("  stepper <degree> <speed_percent>\r\n");
+   print!("    - Move stepper motor by specified degrees at optional speed percentage\r\n");
+   print!("  adc <interval_ms>\r\n");
+   print!("    - Set ADC read interval in ms\r\n");
+   print!("  help\r\n");
+   print!("    - Show this help message\r\n");
+   print!("\r\n");
+}
+
+/**
  * @brief Print a formatted string to the serial port.
  */
 #[macro_export]
@@ -94,7 +111,7 @@ macro_rules! print {
       ($($arg:tt)*) => {{
             let mut guard = SERIAL_TX.lock();
             if let Some(serial_tx) = guard.as_mut() {
-               const SIZE_BUFFER: usize = 128;
+               const SIZE_BUFFER: usize = 256;
                let mut buffer = heapless::String::<SIZE_BUFFER>::new(); // Adjust buffer size as needed
                core::write!(buffer, $($arg)*).unwrap();
                let _ = serial_tx.write(buffer.as_bytes()).await;

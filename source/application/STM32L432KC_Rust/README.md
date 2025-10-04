@@ -24,7 +24,7 @@
   * **led**: toggle the led at the ms interval given
     * ex) "led 100": toggle the led every 100ms
 
-  * **stepper**: move the stepper motor with a degree input. Note that currently negative amount is not supported.
+  * **stepper**: move the stepper motor with a degree input.
     * ex) "stepper 100": rotate the stepper motor for 100 degree in CW direction
 
   * **adc**: turn on the adc input reading at the ms interval given
