@@ -21,12 +21,11 @@
   - Debugging: **press F5**
 
 * CLI commands
+  * **help**: show available command lists
   * **led**: toggle the led at the ms interval given
     * ex) "led 100": toggle the led every 100ms
-
   * **stepper**: move the stepper motor with a degree input.
     * ex) "stepper 100": rotate the stepper motor for 100 degree in CW direction
-
   * **adc**: turn on the adc input reading at the ms interval given
     * ex) "adc 1000": read the adc every 1000ms
 
@@ -37,7 +36,7 @@
 		* TX: A7 (PA2)
 		* RX: A2 (PA3)
 	* Baudrate : 115200
-	  * Line feed setting in Teraterm: TX: CR+LF and RX: CR
+	  * Line feed setting in Teraterm: TX: **CR+LF** and RX: **CR**
 	* When connecting a UART-to-USB module to the laptop, make sure the com port is not of Nucleo's.
   * LED
     * Pin: PB3
