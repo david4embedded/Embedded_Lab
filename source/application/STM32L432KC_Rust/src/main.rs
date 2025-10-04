@@ -46,56 +46,51 @@ static ADC_READ: Mutex<MutexEmbassy, AdcReadIntervalMs> = Mutex::new(0);
 
 /******************************************* Function Definitions ******************************************/
 /**
- * @brief LED task
- * @param led: the LED output
+ * @brief Main function
+ * @param spawner: the spawner
  */
-#[embassy_executor::task]
-async fn led_task(mut led: Output<'static>) {
-    loop {
-        let period_ms = LED_PERIOD_MS.lock().await.clone();
-
-        led.set_high();
-        Timer::after_millis(period_ms).await;
-        led.set_low();
-        Timer::after_millis(period_ms).await;
+#[embassy_executor::main]
+async fn main(spawner: Spawner) {
+    // Initialize the peripherals
+    let mut config = embassy_stm32::Config::default();
+    {
+        use embassy_stm32::rcc::*;
+        config.rcc.mux.adcsel = mux::Adcsel::SYS;
     }
-}
+    let p = embassy_stm32::init(config);
 
-/**
- * @brief Stepper task
- * @param stepper: the stepper motor
- */
-#[embassy_executor::task]
-async fn stepper_task(mut stepper: Stepper<'static>) {
+    // LED
+    let led = Output::new(p.PB3, Level::High, Speed::Low);
+
+    // USART2
+    let config = embassy_stm32::usart::Config::default();    
+    let serial = Uart::new(p.USART2, p.PA3, p.PA2, Irqs, p.DMA1_CH7, p.DMA1_CH6, config).unwrap();
+    let (serial_tx, serial_rx) = serial.split();
+    cli::create_singleton_sender(serial_tx);
+
+    // Stepper motor
+    let a_pos = Output::new(p.PA4, Level::Low, Speed::Low);
+    let a_neg = Output::new(p.PA5, Level::Low, Speed::Low);
+    let b_pos = Output::new(p.PA6, Level::Low, Speed::Low);
+    let b_neg = Output::new(p.PA7, Level::Low, Speed::Low);
+    let stepper = Stepper::new(a_pos, a_neg, b_pos, b_neg);
+
+    // ADC
+    let mut adc = Adc::new(p.ADC1);
+    adc.set_resolution(Resolution::BITS12);
+    adc.set_sample_time(SampleTime::CYCLES2_5);
+    let channel = p.PA0;
+
+    // Spawn the LED task
+    let _ = spawner.spawn(led_task(led)).unwrap();
+    let _ = spawner.spawn(cli_task(serial_rx)).unwrap();
+    let _ = spawner.spawn(stepper_task(stepper)).unwrap();
+    let _ = spawner.spawn(adc_task(adc, channel)).unwrap();
+
     loop {
-        let (degree, speed_percent) = STEPPER_PARAMS.lock().await.clone();
-        if degree != 0f32 {
-            stepper.set_parameters(degree, speed_percent).await;
-            stepper.move_relative().await;
-            *STEPPER_PARAMS.lock().await = (0f32, 0f32);
-        }
-
-        // Yield the CPU
-        Timer::after_millis(100).await;
-    }
-}
-
-/**
- * @brief ADC task
- * @param adc: the ADC peripheral
- */
-#[embassy_executor::task]
-async fn adc_task(mut adc: Adc<'static, ADC1>, mut channel: PA0) {
-    loop {
-        let read_interval_ms = ADC_READ.lock().await.clone();                
-        if read_interval_ms > 0 {
-            let value = adc.blocking_read(&mut channel);
-            print!("ADC: value: {}\r\n", value);
-            Timer::after_millis(read_interval_ms).await;
-            continue;
-        }
-
-        Timer::after_millis(100).await;
+        // Yield the CPU to the executor by waiting for a timer to expire; 
+        // this loop is supposed be sleeping most of the time.
+        Timer::after_millis(1000).await;
     }
 }
 
@@ -148,51 +143,56 @@ async fn cli_task(mut rx: UartRx<'static, Async>) {
 }
 
 /**
- * @brief Main function
- * @param spawner: the spawner
+ * @brief LED task
+ * @param led: the LED output
  */
-#[embassy_executor::main]
-async fn main(spawner: Spawner) {
-    // Initialize the peripherals
-    let mut config = embassy_stm32::Config::default();
-    {
-        use embassy_stm32::rcc::*;
-        config.rcc.mux.adcsel = mux::Adcsel::SYS;
-    }
-    let p = embassy_stm32::init(config);
-
-    // LED
-    let led = Output::new(p.PB3, Level::High, Speed::Low);
-
-    // USART2
-    let config = embassy_stm32::usart::Config::default();    
-    let serial = Uart::new(p.USART2, p.PA3, p.PA2, Irqs, p.DMA1_CH7, p.DMA1_CH6, config).unwrap();
-    let (serial_tx, serial_rx) = serial.split();
-    cli::create_singleton_sender(serial_tx);
-
-    // Stepper motor
-    let a_pos = Output::new(p.PA4, Level::Low, Speed::Low);
-    let a_neg = Output::new(p.PA5, Level::Low, Speed::Low);
-    let b_pos = Output::new(p.PA6, Level::Low, Speed::Low);
-    let b_neg = Output::new(p.PA7, Level::Low, Speed::Low);
-    let stepper = Stepper::new(a_pos, a_neg, b_pos, b_neg);
-
-    // ADC
-    let mut adc = Adc::new(p.ADC1);
-    adc.set_resolution(Resolution::BITS12);
-    adc.set_sample_time(SampleTime::CYCLES2_5);
-    let channel = p.PA0;
-
-    // Spawn the LED task
-    let _ = spawner.spawn(led_task(led)).unwrap();
-    let _ = spawner.spawn(cli_task(serial_rx)).unwrap();
-    let _ = spawner.spawn(stepper_task(stepper)).unwrap();
-    let _ = spawner.spawn(adc_task(adc, channel)).unwrap();
-
+#[embassy_executor::task]
+async fn led_task(mut led: Output<'static>) {
     loop {
-        // Yield the CPU to the executor by waiting for a timer to expire; 
-        // this loop is supposed be sleeping most of the time.
-        Timer::after_millis(1000).await;
+        let period_ms = LED_PERIOD_MS.lock().await.clone();
+
+        led.set_high();
+        Timer::after_millis(period_ms).await;
+        led.set_low();
+        Timer::after_millis(period_ms).await;
+    }
+}
+
+/**
+ * @brief Stepper task
+ * @param stepper: the stepper motor
+ */
+#[embassy_executor::task]
+async fn stepper_task(mut stepper: Stepper<'static>) {
+    loop {
+        let (degree, speed_percent) = STEPPER_PARAMS.lock().await.clone();
+        if degree != 0f32 {
+            stepper.set_parameters(degree, speed_percent).await;
+            stepper.move_relative().await;
+            *STEPPER_PARAMS.lock().await = (0f32, 0f32);
+        }
+
+        // Yield the CPU
+        Timer::after_millis(100).await;
+    }
+}
+
+/**
+ * @brief ADC task
+ * @param adc: the ADC peripheral
+ */
+#[embassy_executor::task]
+async fn adc_task(mut adc: Adc<'static, ADC1>, mut channel: PA0) {
+    loop {
+        let read_interval_ms = ADC_READ.lock().await.clone();                
+        if read_interval_ms > 0 {
+            let value = adc.blocking_read(&mut channel);
+            print!("ADC: value: {}\r\n", value);
+            Timer::after_millis(read_interval_ms).await;
+            continue;
+        }
+
+        Timer::after_millis(100).await;
     }
 }
 
