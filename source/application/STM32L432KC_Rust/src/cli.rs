@@ -30,6 +30,35 @@ pub static SERIAL_TX: Mutex<Option<UartTx<'_, Async>>> = Mutex::new(None);
 
 /******************************************* Function Definitions ******************************************/
 /**
+ * @brief Print a welcome message to the serial port.
+ */
+pub async fn print_welcome() {
+   print!("\r\n");
+   print!(" ************************************\r\n");
+   print!(" * Welcome to STM32L431 Rust Project\r\n");
+   print!(" * Version: 1.0.0\r\n");
+   print!(" * Author: SSKIM \r\n");
+   print!(" ************************************\r\n");
+}
+
+/**
+ * @brief Print help message to the serial port.
+ */
+pub async fn print_help() {
+   print!("\r\n");
+   print!("Available commands:\r\n");
+   print!("  led <period_ms>\r\n");
+   print!("    - Toggle the LED at the specified interval in ms\r\n");
+   print!("  stepper <degree> <speed_percent>\r\n");
+   print!("    - Move stepper motor by specified degrees at optional speed percentage\r\n");
+   print!("  adc <interval_ms>\r\n");
+   print!("    - Set ADC read interval in ms\r\n");
+   print!("  help\r\n");
+   print!("    - Show this help message\r\n");
+   print!("\r\n");
+}
+
+/**
  * @brief Get the arguments for a CLI command.
  * @details This function gets a character and pushed it into a buffer until a carriage return is received.
  *          When a carriage return is received, the buffer is parsed into a vector of fixed string slices to form the command.
@@ -85,35 +114,6 @@ pub fn create_singleton_sender(serial_tx: UartTx<'static, Async>) {
  */
 pub async fn clear_screen() {
    print!("\x1B[2J\x1B[1;1H");
-}
-
-/**
- * @brief Print a welcome message to the serial port.
- */
-pub async fn print_welcome() {
-   print!("\r\n");
-   print!(" ************************************\r\n");
-   print!(" * Welcome to STM32L431 Rust Project\r\n");
-   print!(" * Version: 1.0.0\r\n");
-   print!(" * Author: SSKIM \r\n");
-   print!(" ************************************\r\n");
-}
-
-/**
- * @brief Print help message to the serial port.
- */
-pub async fn print_help() {
-   print!("\r\n");
-   print!("Available commands:\r\n");
-   print!("  led <period_ms>\r\n");
-   print!("    - Toggle the LED at the specified interval in ms\r\n");
-   print!("  stepper <degree> <speed_percent>\r\n");
-   print!("    - Move stepper motor by specified degrees at optional speed percentage\r\n");
-   print!("  adc <interval_ms>\r\n");
-   print!("    - Set ADC read interval in ms\r\n");
-   print!("  help\r\n");
-   print!("    - Show this help message\r\n");
-   print!("\r\n");
 }
 
 /**
