@@ -45,6 +45,8 @@ pub async fn print_welcome() {
  * @brief Print help message to the serial port.
  */
 pub async fn print_help() {
+   print!("  This firmware supports cli commands listed in the below.\r\n");
+   print!("  The commands can be executed concurrently utilizing async/await framework.\r\n");
    print!("\r\n");
    print!("Available commands:\r\n");
    print!("  led <period_ms>\r\n");
