@@ -1,3 +1,15 @@
+/************************************************************************************************************
+ * 
+ * @file           : stepper.rs
+ * @brief          : Stepper motor driver
+ * @details        : This file contains the implementation of the stepper motor driver.
+ * @author         : Sungsu Kim
+ * @date           : 2025-10-03
+ * @copyright      : Copyright (c) 2026 Sungsu Kim
+ *
+ ************************************************************************************************************/
+
+/************************************************* Imports **************************************************/ 
 use core::fmt::Write;
 use defmt::debug;
 use embassy_time::{Timer, Instant};
@@ -15,6 +27,7 @@ enum StepperSeq {
    Seq4,
 }
 
+/*************************************************** Types *************************************************/
 /**
  * @brief Stepper motor driver
  */

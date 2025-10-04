@@ -1,6 +1,17 @@
+/************************************************************************************************************
+ * 
+ * @file           : main.rs
+ * @brief          : Main program body
+ * @details        : This file contains the main function and initializes the system.
+ * @author         : Sungsu Kim
+ * @date           : 2025-10-03
+ * @copyright      : Copyright (c) 2026 Sungsu Kim
+ *
+ ************************************************************************************************************/
+
+/************************************************* Imports **************************************************/
 #![no_std]
 #![no_main]
-
 #[allow(unused_imports)]
 use defmt::debug;
 use core::fmt::Write;
@@ -22,16 +33,18 @@ use nucleo_l432kc_embassy::cli::{self, *};
 use nucleo_l432kc_embassy::print;
 use nucleo_l432kc_embassy::MutexEmbassy;
 
-// Aliases
+/************************************************* Aliases *************************************************/
 type StepperDegree = f32;
 type StepperSpeedPercent = f32;
 type AdcReadIntervalMs = u64;
 
+/********************************************* Static variables ********************************************/
 // Global variables for communication between tasks
 static LED_PERIOD_MS: Mutex<MutexEmbassy, u64> = Mutex::new(1000);
 static STEPPER_PARAMS: Mutex<MutexEmbassy, (StepperDegree, StepperSpeedPercent)> = Mutex::new((0f32, 0f32));
 static ADC_READ: Mutex<MutexEmbassy, AdcReadIntervalMs> = Mutex::new(0);
 
+/******************************************* Function Definitions ******************************************/
 /**
  * @brief LED task
  * @param led: the LED output

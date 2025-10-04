@@ -1,3 +1,15 @@
+/************************************************************************************************************
+ * 
+ * @file           : cli.rs
+ * @brief          : Command Line Interface
+ * @details        : This file contains the implementation of the command line interface for the system.
+ * @author         : Sungsu Kim
+ * @date           : 2025-10-03
+ * @copyright      : Copyright (c) 2026 Sungsu Kim
+ *
+ ************************************************************************************************************/
+
+/************************************************* Imports **************************************************/
 use crate::print;
 use core::fmt::Write;
 use embassy_stm32::mode::Async;
@@ -5,17 +17,18 @@ use embassy_stm32::usart::{UartTx};
 use heapless::{String, Vec};
 use spin::Mutex;
 
-// Constants
+/************************************************* Constants ************************************************/
 const MAX_CLI_ARGS: usize = 20;
 const SIZE_CLI_RX_BUFFER: usize = 64;
 
-// Aliases
+/************************************************** Aliases *************************************************/
 pub type FixedStringSlices = Vec<String<SIZE_CLI_RX_BUFFER>, MAX_CLI_ARGS>;
 pub type StringCLI = String<SIZE_CLI_RX_BUFFER>;
 
-// Global variables
+/********************************************* Static variables ********************************************/
 pub static SERIAL_TX: Mutex<Option<UartTx<'_, Async>>> = Mutex::new(None);
 
+/******************************************* Function Definitions ******************************************/
 /**
  * @brief Get the arguments for a CLI command.
  * @details This function gets a character and pushed it into a buffer until a carriage return is received.
@@ -80,7 +93,7 @@ pub async fn clear_screen() {
 pub async fn print_welcome() {
    print!("\r\n");
    print!(" ************************************\r\n");
-   print!(" * Welcome to STM32L431 Rust Project - II\r\n");
+   print!(" * Welcome to STM32L431 Rust Project\r\n");
    print!(" * Version: 1.0.0\r\n");
    print!(" * Author: SSKIM \r\n");
    print!(" ************************************\r\n");
