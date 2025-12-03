@@ -8,5 +8,20 @@
       "freertosconfig.h": "c",
       "portable.h": "c",
       "typeinfo": "cpp"
-   }
+   },
+   "clangd.arguments": [
+        // C/C++ 코드를 위해 clangd가 clang-tidy를 실행하도록 지시
+        "--clang-tidy",
+        // 원하는 clang-tidy 검사 규칙 설정
+        // 예: 버그, 가독성, 현대화 관련 검사 모두 활성화
+        "--clang-tidy-checks=bugprone-*,readability-*,modernize-*",
+        // 헤더 파일까지 분석에 포함하도록 설정
+        "-header-filter=.*"
+    ],
+    // (선택 사항) clangd가 타겟 아키텍처의 정보를 GCC-ARM 경로에서 가져오도록 설정
+    // **주의**: 경로는 사용자 시스템에 설치된 GCC-ARM 경로로 변경해야 합니다.
+    "clangd.fallbackFlags": [
+        "--target=arm-none-eabi",
+        "--query-driver=/path/to/arm-none-eabi-gcc"
+    ]
 }
