@@ -1,0 +1,23 @@
+Language: Cpp
+BasedOnStyle: LLVM
+
+# 1. 중괄호 스타일: Allman (중괄호 다음 줄 배치)
+BreakBeforeBraces: Allman
+
+# 2. 들여쓰기 설정
+IndentWidth: 3
+TabWidth: 3
+UseTab: Never
+
+# 3. 클래스 내부 접근 제어자(:) 들여쓰기
+# -4로 설정하면 public: 이 클래스 벽면에 딱 붙습니다.
+AccessModifierOffset: -4
+
+# 4. 가독성 설정 (호환성 높은 키워드로 변경)
+ColumnLimit: 100
+BinPackArguments: false
+BinPackParameters: false
+AllowShortFunctionsOnASingleLine: None
+
+# 5. 정렬 설정
+PointerAlignment: Right
