@@ -3,5 +3,6 @@
    "files.associations": {
       ".fantomasignore": "ignore",
       "main.h": "c"
-   }
+   },
+   "STM32VSCodeExtension.cubeCLT.path": "${env:STM32CLT_PATH}"
 }

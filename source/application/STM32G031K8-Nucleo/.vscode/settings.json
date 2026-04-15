@@ -1,3 +1,4 @@
 {
-   "cmake.configureOnOpen": true
+   "cmake.configureOnOpen": true,
+   "STM32VSCodeExtension.cubeCLT.path": "${env:STM32CLT_PATH}"
 }
