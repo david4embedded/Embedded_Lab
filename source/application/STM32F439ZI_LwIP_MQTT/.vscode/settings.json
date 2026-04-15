@@ -8,5 +8,6 @@
       "freertosconfig.h": "c",
       "portable.h": "c",
       "typeinfo": "cpp"
-   }
+   },
+   "STM32VSCodeExtension.cubeCLT.path": "${env:STM32CLT_PATH}"
 }
