@@ -1,0 +1,23 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "probe-rs-debug",
+            "request": "launch",
+            "name": "probe-rs Debug",
+            "chip": "STM32L432KCUx",
+            "flashingConfig": {
+                "flashingEnabled": true,
+                "resetAfterFlashing": true,
+                "haltAfterReset": true
+            },
+            "coreConfigs": [
+                {
+                    "coreIndex": 0,
+                    "rttEnabled": true,
+                    "programBinary": "./target/thumbv7em-none-eabi/debug/nucleo_l432kc_embassy"
+                }
+            ]
+        }
+    ]
+}

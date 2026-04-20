@@ -164,9 +164,9 @@ async fn main(spawner: Spawner) {
     // LED
     let led = Output::new(p.PB3, Level::High, Speed::Low);
 
-    // USART2
+    // USART2 (VCOM)
     let config = embassy_stm32::usart::Config::default();    
-    let serial = Uart::new(p.USART2, p.PA3, p.PA2, Irqs, p.DMA1_CH7, p.DMA1_CH6, config).unwrap();
+    let serial = Uart::new(p.USART2, p.PA15, p.PA2, Irqs, p.DMA1_CH7, p.DMA1_CH6, config).unwrap();
     let (serial_tx, serial_rx) = serial.split();
     cli::create_singleton_sender(serial_tx);
 
