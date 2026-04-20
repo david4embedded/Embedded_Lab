@@ -6,6 +6,8 @@
     "search.exclude": {
         "**/*.bak": true,
         "**/*rs.bak": true,
+    },
+    "[rust]": {
+        "editor.formatOnSave": false
     }
 }
-
