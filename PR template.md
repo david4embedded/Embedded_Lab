@@ -1,17 +1,23 @@
-### Summary of Changes
+## Summary of Changes
+* 
 
-### Detailed Description
+## Detailed Description
+* 
 
-### Related Issues/Tickets
+## Related Issues/Tickets
+*
 
-### How to Test
+## How to Test
+*
 
-### Screenshots and GIFs (Optional)
+## Screenshots and GIFs (Optional)
+*
 
-### Checklist
+## Checklist
 - [ ] I have completed local testing.
 - [ ] All CI/CD pipelines have passed.
 - [ ] I have updated the documentation.
 - [ ] I have followed the project's coding conventions.
 
-### Reviewer's Note
+## Note
+*
