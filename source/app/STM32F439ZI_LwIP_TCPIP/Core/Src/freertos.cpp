@@ -115,6 +115,7 @@ static void taskCli( void const * argument )
 {
    PARAM_NOT_USED( argument );
 
+   LOGGING( "Welcome to STM32F439ZI LwIP TCP/IP Application" );
    LOGGING( "CLI: Task Started..." );
 
    auto& cli = lib::CLI::getInstance();

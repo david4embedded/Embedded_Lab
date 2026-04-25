@@ -143,6 +143,8 @@ extern "C" int _write( int file, char *ptr, int len )
 
    ptr[len] = '\0';
    writeLog( ptr );
+
+   return len;
 }
 
 /**
