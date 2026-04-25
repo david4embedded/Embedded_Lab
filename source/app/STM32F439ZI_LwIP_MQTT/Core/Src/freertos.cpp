@@ -136,6 +136,7 @@ static void taskCli( void const * argument )
 {
    PARAM_NOT_USED( argument );
 
+   LOGGING( "Welcome to the STM32 MQTT Client!" );
    LOGGING( "CLI Task Started..." );
 
    auto& cli = lib::CLI::getInstance();

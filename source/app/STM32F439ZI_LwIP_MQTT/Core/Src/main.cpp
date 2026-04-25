@@ -36,8 +36,6 @@ int main(void)
 
    MX_GPIO_Init();
    MX_USART3_UART_Init();
-   
-   LOGGING( "Welcome to the STM32 MQTT Client!" );
 
    MX_FREERTOS_Init();
    osKernelStart();

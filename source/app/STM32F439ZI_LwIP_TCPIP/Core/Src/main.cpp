@@ -39,8 +39,6 @@ int main(void)
    BSP_LED_Init( LED_GREEN );
    BSP_LED_Init( LED_BLUE );
 
-   LOGGING( "Welcome to STM32F439ZI LwIP TCP/IP Application" );
-
    osKernelStart();
 
    while (1)
