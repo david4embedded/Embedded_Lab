@@ -9,5 +9,9 @@
       "portable.h": "c",
       "typeinfo": "cpp"
    },
-   "STM32VSCodeExtension.cubeCLT.path": "${env:STM32CLT_PATH}"
+   "STM32VSCodeExtension.cubeCLT.path": "${env:STM32CLT_PATH}",
+   "cmake.cmakePath": "cube-cmake",
+   "cmake.configureArgs": [
+      "-DCMAKE_COMMAND=cube-cmake"
+   ]
 }

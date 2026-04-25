@@ -1,3 +1,7 @@
 {
-   "cmake.sourceDirectory": "D:/git_repository/Embedded_Lab/source/application/STM32F439ZI_LwIP_MQTT"
+   "cmake.sourceDirectory": "D:/git_repository/Embedded_Lab/source/application/STM32F439ZI_LwIP_MQTT",
+   "cmake.cmakePath": "cube-cmake",
+   "cmake.configureArgs": [
+      "-DCMAKE_COMMAND=cube-cmake"
+   ]
 }
