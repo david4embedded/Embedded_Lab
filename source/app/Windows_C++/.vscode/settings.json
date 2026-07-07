@@ -1,5 +1,11 @@
 {
-   "C_Cpp.default.compilerPath": "C:/msys64/mingw64/bin/g++.exe",
+   "C_Cpp.default.compilerPath": "C:/Strawberry/c/bin/g++.exe",
+   "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+   "cmake.configurePreset": "gcc-debug",
+   "cmake.buildPreset": "gcc-debug",
+   "cmake.buildDirectory": "${workspaceFolder}/build",
+   "cmake.configureOnOpen": false,
+   "cmake.useCMakePresets": "always",
    "files.associations": {
       ".fantomasignore": "ignore",
       "ostream": "cpp",

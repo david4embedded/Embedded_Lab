@@ -1,0 +1,39 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 20,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "gcc-debug",
+      "displayName": "GCC Debug (MinGW Makefiles)",
+      "generator": "MinGW Makefiles",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_COMPILER": "C:/Strawberry/c/bin/g++.exe",
+        "CMAKE_MAKE_PROGRAM": "C:/Strawberry/c/bin/mingw32-make.exe"
+      }
+    },
+    {
+      "name": "gcc-debug-ninja",
+      "displayName": "GCC Debug (Ninja)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build-ninja",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_COMPILER": "C:/Strawberry/c/bin/g++.exe",
+        "CMAKE_MAKE_PROGRAM": "C:/Strawberry/c/bin/ninja.exe"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "gcc-debug",
+      "displayName": "Build GCC Debug",
+      "configurePreset": "gcc-debug"
+    }
+  ]
+}
