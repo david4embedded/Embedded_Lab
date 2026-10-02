@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <WiFi.h>
+#include "mqtt_client.h"
 #include "secure_info.h"
 
 const int ledPin = 23;
@@ -28,6 +29,8 @@ void setup()
 
     server.begin();
     Serial.println("TCP echo server listening on port 7");
+
+    mqttClientBegin();
 }
 
 void loop()
