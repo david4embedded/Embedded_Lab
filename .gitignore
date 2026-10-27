@@ -1,0 +1,15 @@
+# Zephyr / west build output
+build/
+build-*/
+twister-out/
+twister-out.*/
+
+# Python
+__pycache__/
+
+# Build directories
+**/build*/
+**/.pio*/
+
+# Etc
+/.vscode/tasks.json

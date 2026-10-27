@@ -3,5 +3,8 @@
    "cmake.cmakePath": "cube-cmake",
    "cmake.configureArgs": [
       "-DCMAKE_COMMAND=cube-cmake"
+   ],
+   "nrf-connect.applications": [
+      "${workspaceFolder}\\source\\app\\nRF54L15L_Sense"
    ]
 }
