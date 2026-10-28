@@ -27,6 +27,7 @@
   ```powershell
   $T = "C:\ncs\toolchains\fd21892d0f"
   $env:PATH = "$T;$T\mingw64\bin;$T\bin;$T\opt\bin;$T\opt\bin\Scripts;$T\opt\nanopb\generator-bin;$T\nrfutil\bin;$T\opt\zephyr-sdk\arm-zephyr-eabi\bin;$env:PATH"
+  $env:Path = "C:\openocd\OpenOCD-20260302-0.12.0\bin;$env:Path"
   $env:PYTHONPATH = "$T\opt\bin;$T\opt\bin\Lib;$T\opt\bin\Lib\site-packages"
   $env:NRFUTIL_HOME = "$T\nrfutil\home"
   $env:ZEPHYR_TOOLCHAIN_VARIANT = "zephyr"
@@ -39,20 +40,20 @@
 
 * Steps to build from the command line
   ```
-  west build -p always -b xiao_nrf54l15/nrf54l15/cpuapp -d C:\Repository_etc\Embedded_Lab\source\app\nRF54L15L_Sense\build C:\Repository_etc\Embedded_Lab\source\app\nRF54L15L_Sense
+  west build -p always -b xiao_nrf54l15/nrf54l15/cpuapp -d [source directory]\build [source directory]
   ```
 
 * Steps to flash from the command line
   * The board has no J-Link. The on-board SAMD11 works as a CMSIS-DAP probe (VID:PID `2886:0066`), and the default runner is OpenOCD.
     `nrfutil device` / `nrfjprog` may not detect the board.
-  * `openocd` must be on the PATH. The NCS toolchain does not include it; during development `C:\Development\environment-setup\tools\installed\openocd\bin\openocd.exe` was used.
+  * `openocd` must be on the PATH. The NCS toolchain does not include it
   * With only one board connected:
   ```
-  west flash -d C:\Repository_etc\Embedded_Lab\source\app\nRF54L15L_Sense\build
+  west flash -d [build directory]
   ```
   * With several probes connected, select the probe by its serial number through an OpenOCD command (`-i` / `--dev-id` is not supported by the OpenOCD runner):
   ```
-  west flash -d C:\Repository_etc\Embedded_Lab\source\app\nRF54L15L_Sense\build --cmd-pre-init "adapter serial 716B57F9"
+  west flash -d [build directory] --cmd-pre-init "adapter serial [serial#]"
   ```
   * The probe serial number is printed by OpenOCD during flashing (`CMSIS-DAP: Serial# = 716B57F9`). `716B57F9` is the serial of the board used during development; replace it with your own.
   * A successful flash ends with lines like:
