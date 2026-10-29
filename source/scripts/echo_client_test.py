@@ -29,16 +29,21 @@ def main():
 
          # Encode the message to bytes and send it
          message += "\r\n"
-         
-         s.sendall(message.encode('utf-8'))
-         print(f"Sent: '{message}'")
+         payload = message.encode('utf-8')
+         s.sendall(payload)
+         print(f"Sent: {message!r}")
 
          # Receive a response from the server
          timeout_sec = 5
          print(f"Waiting for response...within {timeout_sec} seconds")
          s.settimeout(timeout_sec)  # Set timeout to 5 seconds
          try:
-            data = s.recv(1024)
+            data = bytearray()
+            while len(data) < len(payload):
+               chunk = s.recv(len(payload) - len(data))
+               if not chunk:
+                  raise ConnectionError("Server closed the connection before echoing the full message.")
+               data.extend(chunk)
          except socket.timeout:
             print("Timeout occurred while receiving data.")
             return
@@ -48,7 +53,7 @@ def main():
          
          # Decode the received data to a string
          received_message = data.decode('utf-8')
-         print(f"Received: '{received_message}'")
+         print(f"Received: {received_message!r}")
 
       except ConnectionRefusedError:
          print("Error: The server is not running or the port is incorrect.")

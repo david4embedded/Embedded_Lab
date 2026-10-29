@@ -3,3 +3,22 @@
 **/debug/
 **/release/
 **/target/
+=======
+# Zephyr / west build output
+build/
+build-*/
+twister-out/
+twister-out.*/
+
+# Python
+__pycache__/
+
+# Build directories
+**/build*/
+**/.pio*/
+**debug*/
+**release*/
+**target*/
+
+# Etc
+/.vscode/tasks.json
