@@ -1,3 +1,9 @@
+*.bak
+**/build/
+**/debug/
+**/release/
+**/target/
+=======
 # Zephyr / west build output
 build/
 build-*/
@@ -16,4 +22,3 @@ __pycache__/
 
 # Etc
 /.vscode/tasks.json
-*.bak
