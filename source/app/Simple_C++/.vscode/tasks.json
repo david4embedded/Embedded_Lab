@@ -1,0 +1,55 @@
+{
+   "tasks": [
+      {
+         "type": "shell",
+         "label": "CMake: configure (GCC)",
+         "command": "cmake",
+         "args": [
+            "--preset",
+            "gcc-debug"
+         ],
+         "options": {
+            "cwd": "${workspaceFolder}"
+         },
+         "problemMatcher": []
+      },
+      {
+         "type": "shell",
+         "label": "CMake: clean configure (GCC)",
+         "command": "powershell",
+         "args": [
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-Command",
+            "if (Test-Path '${workspaceFolder}\\build') { Remove-Item -Recurse -Force '${workspaceFolder}\\build' }; cmake --preset gcc-debug"
+         ],
+         "options": {
+            "cwd": "${workspaceFolder}"
+         },
+         "problemMatcher": []
+      },
+      {
+         "type": "shell",
+         "label": "CMake: build",
+         "command": "cmake",
+         "args": [
+            "--build",
+            "--preset",
+            "gcc-debug"
+         ],
+         "options": {
+            "cwd": "${workspaceFolder}"
+         },
+         "dependsOn": "CMake: configure (GCC)",
+         "problemMatcher": [
+            "$gcc"
+         ],
+         "group": {
+            "kind": "build",
+            "isDefault": true
+         }
+      }
+   ],
+   "version": "2.0.0"
+}
