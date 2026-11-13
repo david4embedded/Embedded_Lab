@@ -19,7 +19,8 @@
 #include <string>
 #include <vector>
 
-namespace {
+namespace
+{
 
 using SampleWindow = std::array<float, EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE>;
 using AccelerationSample = std::array<float, EI_CLASSIFIER_RAW_SAMPLES_PER_FRAME>;
@@ -31,12 +32,14 @@ void handle_interrupt(int)
     stop_requested = 1;
 }
 
-class InterruptHandlerGuard {
+class InterruptHandlerGuard
+{
 public:
     InterruptHandlerGuard()
         : previous_handler_(std::signal(SIGINT, handle_interrupt))
     {
-        if (previous_handler_ == SIG_ERR) {
+        if (previous_handler_ == SIG_ERR)
+        {
             throw std::runtime_error("Could not register Ctrl+C handler");
         }
     }
@@ -57,7 +60,8 @@ private:
 std::string trim(const std::string &value)
 {
     const size_t first = value.find_first_not_of(" \t\r\n");
-    if (first == std::string::npos) {
+    if (first == std::string::npos)
+    {
         return {};
     }
     const size_t last = value.find_last_not_of(" \t\r\n");
@@ -69,10 +73,12 @@ std::vector<std::string> split_csv_row(const std::string &line)
     std::vector<std::string> fields;
     std::stringstream stream(line);
     std::string field;
-    while (std::getline(stream, field, ',')) {
+    while (std::getline(stream, field, ','))
+    {
         fields.push_back(trim(field));
     }
-    if (!line.empty() && line.back() == ',') {
+    if (!line.empty() && line.back() == ',')
+    {
         fields.emplace_back();
     }
     return fields;
@@ -80,7 +86,8 @@ std::vector<std::string> split_csv_row(const std::string &line)
 
 bool parse_number(const std::string &text, float &value)
 {
-    if (text.empty()) {
+    if (text.empty())
+    {
         return false;
     }
 
@@ -88,7 +95,8 @@ bool parse_number(const std::string &text, float &value)
     errno = 0;
     const float parsed = std::strtof(text.c_str(), &end);
     if (errno == ERANGE || end == text.c_str() || *end != '\0' ||
-        !std::isfinite(parsed)) {
+        !std::isfinite(parsed))
+    {
         return false;
     }
     value = parsed;
@@ -100,24 +108,28 @@ bool parse_imu_stream_line(
     AccelerationSample &sample)
 {
     const size_t first_separator = line.find('|');
-    if (first_separator == std::string::npos) {
+    if (first_separator == std::string::npos)
+    {
         return false;
     }
     const size_t second_separator = line.find('|', first_separator + 1);
-    if (second_separator == std::string::npos) {
+    if (second_separator == std::string::npos)
+    {
         return false;
     }
 
     std::istringstream timestamp_stream(line.substr(0, first_separator));
     std::uint64_t timestamp = 0;
-    if (!(timestamp_stream >> timestamp)) {
+    if (!(timestamp_stream >> timestamp))
+    {
         return false;
     }
     (void)timestamp;
 
     std::istringstream acceleration_stream(
         line.substr(first_separator + 1, second_separator - first_separator - 1));
-    if (!(acceleration_stream >> sample[0] >> sample[1] >> sample[2])) {
+    if (!(acceleration_stream >> sample[0] >> sample[1] >> sample[2]))
+    {
         return false;
     }
     return std::isfinite(sample[0]) &&
@@ -127,8 +139,10 @@ bool parse_imu_stream_line(
 
 size_t find_column(const std::vector<std::string> &header, const std::string &name)
 {
-    for (size_t index = 0; index < header.size(); ++index) {
-        if (header[index] == name) {
+    for (size_t index = 0; index < header.size(); ++index)
+    {
+        if (header[index] == name)
+        {
             return index;
         }
     }
@@ -138,13 +152,15 @@ size_t find_column(const std::vector<std::string> &header, const std::string &na
 bool read_csv(const std::string &path, std::vector<std::array<float, 3>> &samples)
 {
     std::ifstream input(path);
-    if (!input) {
+    if (!input)
+    {
         std::cerr << "ERROR: Cannot open CSV file: " << path << '\n';
         return false;
     }
 
     std::string line;
-    if (!std::getline(input, line)) {
+    if (!std::getline(input, line))
+    {
         std::cerr << "ERROR: CSV file is empty.\n";
         return false;
     }
@@ -153,20 +169,24 @@ bool read_csv(const std::string &path, std::vector<std::array<float, 3>> &sample
     const size_t ay_column = find_column(header, "ay");
     const size_t az_column = find_column(header, "az");
     if (ax_column == header.size() || ay_column == header.size() ||
-        az_column == header.size()) {
+        az_column == header.size())
+    {
         std::cerr << "ERROR: CSV header must contain ax, ay, and az columns.\n";
         return false;
     }
 
     size_t line_number = 1;
-    while (std::getline(input, line)) {
+    while (std::getline(input, line))
+    {
         ++line_number;
-        if (trim(line).empty()) {
+        if (trim(line).empty())
+        {
             continue;
         }
         const auto fields = split_csv_row(line);
         const size_t max_column = std::max(ax_column, std::max(ay_column, az_column));
-        if (fields.size() <= max_column) {
+        if (fields.size() <= max_column)
+        {
             std::cerr << "ERROR: Missing acceleration value on CSV line "
                       << line_number << ".\n";
             return false;
@@ -175,7 +195,8 @@ bool read_csv(const std::string &path, std::vector<std::array<float, 3>> &sample
         std::array<float, 3> sample{};
         if (!parse_number(fields[ax_column], sample[0]) ||
             !parse_number(fields[ay_column], sample[1]) ||
-            !parse_number(fields[az_column], sample[2])) {
+            !parse_number(fields[az_column], sample[2]))
+        {
             std::cerr << "ERROR: Invalid acceleration value on CSV line "
                       << line_number << ".\n";
             return false;
@@ -183,7 +204,8 @@ bool read_csv(const std::string &path, std::vector<std::array<float, 3>> &sample
         samples.push_back(sample);
     }
 
-    if (input.bad()) {
+    if (input.bad())
+    {
         std::cerr << "ERROR: Failed while reading CSV file: " << path << '\n';
         return false;
     }
@@ -194,12 +216,15 @@ bool classify_window(const SampleWindow &window, size_t window_number)
 {
     signal_t signal{};
     signal.total_length = window.size();
-    signal.get_data = [&window](size_t offset, size_t length, float *output) {
+    signal.get_data = [&window](size_t offset, size_t length, float *output)
+    {
         if (output == nullptr || offset > window.size() ||
-            length > window.size() - offset) {
+            length > window.size() - offset)
+        {
             return -1;
         }
-        for (size_t index = 0; index < length; ++index) {
+        for (size_t index = 0; index < length; ++index)
+        {
             output[index] = window[offset + index];
         }
         return 0;
@@ -207,7 +232,8 @@ bool classify_window(const SampleWindow &window, size_t window_number)
 
     ei_impulse_result_t result{};
     const EI_IMPULSE_ERROR error = run_classifier(&signal, &result, false);
-    if (error != EI_IMPULSE_OK) {
+    if (error != EI_IMPULSE_OK)
+    {
         std::cerr << "ERROR: Inference failed for window " << window_number
                   << " with error code " << static_cast<int>(error) << ".\n";
         return false;
@@ -217,7 +243,8 @@ bool classify_window(const SampleWindow &window, size_t window_number)
         std::begin(result.classification),
         std::end(result.classification),
         [](const ei_impulse_result_classification_t &left,
-           const ei_impulse_result_classification_t &right) {
+           const ei_impulse_result_classification_t &right)
+        {
             return left.value < right.value;
         });
 
@@ -225,7 +252,8 @@ bool classify_window(const SampleWindow &window, size_t window_number)
               << "  prediction=" << best->label
               << "  confidence=" << std::fixed << std::setprecision(3)
               << best->value;
-    for (size_t index = 0; index < EI_CLASSIFIER_LABEL_COUNT; ++index) {
+    for (size_t index = 0; index < EI_CLASSIFIER_LABEL_COUNT; ++index)
+    {
         std::cout << "  " << result.classification[index].label << '='
                   << std::fixed << std::setprecision(3)
                   << result.classification[index].value;
@@ -234,7 +262,8 @@ bool classify_window(const SampleWindow &window, size_t window_number)
     return true;
 }
 
-class ImuStreamStopGuard {
+class ImuStreamStopGuard
+{
 public:
     explicit ImuStreamStopGuard(platform::SerialPort &serial_port)
         : serial_port_(serial_port), active_(true)
@@ -243,11 +272,14 @@ public:
 
     ~ImuStreamStopGuard()
     {
-        if (active_) {
-            try {
+        if (active_)
+        {
+            try
+            {
                 stop();
             }
-            catch (const std::exception &error) {
+            catch (const std::exception &error)
+            {
                 std::cerr << "WARNING: Could not stop board IMU stream: "
                           << error.what() << '\n';
             }
@@ -256,7 +288,8 @@ public:
 
     void stop()
     {
-        if (active_) {
+        if (active_)
+        {
             serial_port_.write_all(std::string(1, '\x1b'));
             active_ = false;
         }
@@ -269,7 +302,8 @@ private:
 
 int run_live(const std::string &port_name, std::uint32_t baud_rate)
 {
-    if (EI_CLASSIFIER_RAW_SAMPLES_PER_FRAME != 3) {
+    if (EI_CLASSIFIER_RAW_SAMPLES_PER_FRAME != 3)
+    {
         throw std::runtime_error("Live IMU input requires a three-axis model");
     }
 
@@ -293,29 +327,37 @@ int run_live(const std::string &port_name, std::uint32_t baud_rate)
     size_t window_number = 0;
     std::string line;
 
-    while (!stop_requested) {
-        if (!serial_port.read_line(line, 100)) {
+    while (!stop_requested)
+    {
+        if (!serial_port.read_line(line, 100))
+        {
             continue;
         }
 
         AccelerationSample sample{};
-        if (!parse_imu_stream_line(line, sample)) {
+        if (!parse_imu_stream_line(line, sample))
+        {
             continue;
         }
 
         recent_samples.push_back(sample);
-        if (recent_samples.size() > samples_per_window) {
+        if (recent_samples.size() > samples_per_window)
+        {
             recent_samples.pop_front();
         }
-        if (recent_samples.size() < samples_per_window) {
+        if (recent_samples.size() < samples_per_window)
+        {
             continue;
         }
 
-        if (window_number == 0 || ++samples_since_inference >= inference_step) {
+        if (window_number == 0 || ++samples_since_inference >= inference_step)
+        {
             SampleWindow window{};
             size_t sample_index = 0;
-            for (const auto &window_sample : recent_samples) {
-                for (size_t axis = 0; axis < window_sample.size(); ++axis) {
+            for (const auto &window_sample : recent_samples)
+            {
+                for (size_t axis = 0; axis < window_sample.size(); ++axis)
+                {
                     window[sample_index * window_sample.size() + axis]
                         = window_sample[axis];
                 }
@@ -323,7 +365,8 @@ int run_live(const std::string &port_name, std::uint32_t baud_rate)
             }
 
             ++window_number;
-            if (!classify_window(window, window_number)) {
+            if (!classify_window(window, window_number))
+            {
                 return 1;
             }
             samples_since_inference = 0;
@@ -342,7 +385,8 @@ bool parse_baud_rate(const char *text, std::uint32_t &baud_rate)
     errno = 0;
     const unsigned long parsed = std::strtoul(text, &end, 10);
     if (errno == ERANGE || end == text || *end != '\0' || parsed == 0 ||
-        parsed > std::numeric_limits<std::uint32_t>::max()) {
+        parsed > std::numeric_limits<std::uint32_t>::max())
+    {
         return false;
     }
     baud_rate = static_cast<std::uint32_t>(parsed);
@@ -361,41 +405,49 @@ void print_usage()
 
 int main(int argc, char **argv)
 {
-    if (argc >= 2 && std::string(argv[1]) == "--live") {
+    if (argc >= 2 && std::string(argv[1]) == "--live")
+    {
         std::uint32_t baud_rate = 115200;
-        if (argc != 3 && argc != 5) {
+        if (argc != 3 && argc != 5)
+        {
             print_usage();
             return 2;
         }
         if (argc == 5 &&
             (std::string(argv[3]) != "--baud" ||
-             !parse_baud_rate(argv[4], baud_rate))) {
+             !parse_baud_rate(argv[4], baud_rate)))
+        {
             std::cerr << "ERROR: Baud rate must be a positive 32-bit integer.\n";
             return 2;
         }
-        try {
+        try
+        {
             return run_live(argv[2], baud_rate);
         }
-        catch (const std::exception &error) {
+        catch (const std::exception &error)
+        {
             std::cerr << "ERROR: " << error.what() << '\n';
             return 1;
         }
     }
 
-    if (argc != 2) {
+    if (argc != 2)
+    {
         print_usage();
         return 2;
     }
 
     std::vector<std::array<float, 3>> samples;
-    if (!read_csv(argv[1], samples)) {
+    if (!read_csv(argv[1], samples))
+    {
         return 1;
     }
 
     constexpr size_t samples_per_window = EI_CLASSIFIER_RAW_SAMPLE_COUNT;
     const size_t complete_windows = samples.size() / samples_per_window;
     const size_t trailing_samples = samples.size() % samples_per_window;
-    if (complete_windows == 0) {
+    if (complete_windows == 0)
+    {
         std::cerr << "ERROR: Need at least " << samples_per_window
                   << " samples; CSV contains " << samples.size() << ".\n";
         return 1;
@@ -408,20 +460,25 @@ int main(int argc, char **argv)
               << EI_CLASSIFIER_RAW_SAMPLES_PER_FRAME << " axes (ax, ay, az)\n"
               << "Loaded " << samples.size() << " rows; classifying "
               << complete_windows << " non-overlapping window(s).\n";
-    if (trailing_samples != 0) {
+    if (trailing_samples != 0)
+    {
         std::cout << "Note: ignoring " << trailing_samples
                   << " trailing sample(s) that do not fill a window.\n";
     }
 
-    for (size_t window_index = 0; window_index < complete_windows; ++window_index) {
+    for (size_t window_index = 0; window_index < complete_windows; ++window_index)
+    {
         SampleWindow window{};
-        for (size_t sample_index = 0; sample_index < samples_per_window; ++sample_index) {
+        for (size_t sample_index = 0; sample_index < samples_per_window; ++sample_index)
+        {
             const auto &sample = samples[window_index * samples_per_window + sample_index];
-            for (size_t axis = 0; axis < sample.size(); ++axis) {
+            for (size_t axis = 0; axis < sample.size(); ++axis)
+            {
                 window[sample_index * sample.size() + axis] = sample[axis];
             }
         }
-        if (!classify_window(window, window_index + 1)) {
+        if (!classify_window(window, window_index + 1))
+        {
             return 1;
         }
     }
