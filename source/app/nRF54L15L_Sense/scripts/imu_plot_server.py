@@ -4,13 +4,16 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import importlib
 import json
 import re
 import threading
 import webbrowser
 from collections import deque
+from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from typing import Any
 
 
@@ -40,10 +43,15 @@ PAGE = r"""<!doctype html>
     button { cursor: pointer; }
     button:disabled { cursor: wait; opacity: .6; }
     input { width: 75px; }
+    input[type="checkbox"] { width: auto; }
+    .checkbox { display: inline-flex; align-items: center; gap: 5px; }
     .chart { margin: 14px 0; padding: 12px; background: #171e28; border: 1px solid #293443; border-radius: 8px; }
     .chart h2 { font-size: 1rem; margin: 0 0 8px; }
     canvas { display: block; width: 100%; height: 190px; }
     .legend { color: #9daab8; margin-top: 6px; font-size: .85rem; }
+    #csv-base-name { width: 110px; }
+    .csv-controls { display: inline-flex; align-items: center; gap: 8px; }
+    .csv-file-name { display: inline-flex; align-items: center; gap: 5px; }
     @media (max-width: 600px) { body { padding: 12px; } canvas { height: 160px; } }
   </style>
 </head>
@@ -60,6 +68,13 @@ PAGE = r"""<!doctype html>
     <input id="window-seconds" type="number" min="1" max="3600" value="__WINDOW_SECONDS__">
     <label for="sample-interval">Sample interval (ms)</label>
     <input id="sample-interval" type="number" min="10" max="60000" step="1" value="__INTERVAL__">
+    <span class="csv-controls">
+      <label class="checkbox"><input id="create-csv" type="checkbox"> Create .csv</label>
+      <span class="csv-file-name">
+        <label for="csv-base-name">Base name</label>
+        <input id="csv-base-name" type="text" value="acc_data" maxlength="64" pattern="[\p{L}\p{N}_-]+" title="Use letters, numbers, underscores, or hyphens">
+      </span>
+    </span>
   </div>
   <section class="chart"><h2>Acceleration (mg)</h2><canvas id="accel"></canvas><div class="legend">X: red · Y: green · Z: blue</div></section>
   <section class="chart"><h2>Angular velocity (mdps)</h2><canvas id="gyro"></canvas><div class="legend">X: red · Y: green · Z: blue</div></section>
@@ -74,6 +89,8 @@ const clearGraph = document.getElementById("clear-graph");
 const modeToggle = document.getElementById("mode-toggle");
 const windowSeconds = document.getElementById("window-seconds");
 const sampleInterval = document.getElementById("sample-interval");
+const createCsv = document.getElementById("create-csv");
+const csvBaseName = document.getElementById("csv-base-name");
 let streaming = false;
 let fixedWindow = true;
 let renderScheduled = false;
@@ -90,6 +107,8 @@ function updateStreaming(state) {
   streaming = state.streaming;
   streamToggle.textContent = streaming ? "Stop stream" : "Start stream";
   sampleInterval.disabled = streaming;
+  createCsv.disabled = streaming;
+  csvBaseName.disabled = streaming;
   if (Number.isInteger(state.interval)) sampleInterval.value = String(state.interval);
 }
 
@@ -222,7 +241,12 @@ streamToggle.addEventListener("click", async () => {
     const response = await fetch("/stream", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: streaming ? "stop" : "start", interval })
+      body: JSON.stringify({
+        action: streaming ? "stop" : "start",
+        interval,
+        createCsv: !streaming && createCsv.checked,
+        csvBaseName: csvBaseName.value
+      })
     });
     const state = await response.json();
     if (!response.ok) throw new Error(state.error || "Stream control failed");
@@ -267,12 +291,55 @@ class SampleStore:
         self.interval = interval
         self.generation = 0
         self.last_sample_time: int | None = None
+        self.csv_file: Any | None = None
+        self.csv_writer: Any | None = None
+        self.csv_path: Path | None = None
+        self.csv_error: str | None = None
 
-    def start_stream(self, interval: int) -> None:
+    def start_stream(
+        self,
+        interval: int,
+        create_csv: bool = False,
+        csv_base_name: str = "acc_data",
+    ) -> None:
         with self.condition:
+            if create_csv:
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                suffix = 0
+                while True:
+                    suffix_text = f"_{suffix}" if suffix else ""
+                    csv_path = Path.cwd() / f"{csv_base_name}_{timestamp}{suffix_text}.csv"
+                    try:
+                        csv_file = csv_path.open("x", encoding="utf-8", newline="")
+                    except FileExistsError:
+                        suffix += 1
+                        continue
+                    except OSError as error:
+                        raise CsvFileError(
+                            f"Could not create CSV file {csv_path}: {error}"
+                        ) from error
+                    csv_writer = csv.writer(csv_file)
+                    try:
+                        csv_writer.writerow(("timestamp", "ax", "ay", "az"))
+                    except OSError as error:
+                        csv_file.close()
+                        raise CsvFileError(
+                            f"Could not write CSV header to {csv_path}: {error}"
+                        ) from error
+                    self.csv_file = csv_file
+                    self.csv_writer = csv_writer
+                    self.csv_path = csv_path
+                    break
+            else:
+                self.csv_file = None
+                self.csv_writer = None
+                self.csv_path = None
+            self.csv_error = None
             self.generation += 1
             self.samples.clear()
             self.status = "Starting IMU stream"
+            if self.csv_path is not None:
+                self.status += f"; recording to {self.csv_path}"
             self.streaming = True
             self.interval = interval
             self.condition.notify_all()
@@ -288,12 +355,50 @@ class SampleStore:
                 self.generation += 1
                 self.samples.clear()
                 self.status = "Streaming IMU data"
+                if self.csv_path is not None and self.csv_error is None:
+                    self.status += f"; recording to {self.csv_path}"
             self.sequence += 1
             sample["sequence"] = self.sequence
             self.samples.append(sample)
-            if self.streaming and self.status == "Starting IMU stream":
-                self.status = "Streaming IMU data"
+            if self.streaming:
+                if self.csv_writer is not None:
+                    try:
+                        self.csv_writer.writerow(
+                            (sample_time, sample["ax"], sample["ay"], sample["az"])
+                        )
+                    except OSError as error:
+                        self.csv_error = str(error)
+                        self._close_csv()
+                        self.status = f"CSV recording failed: {error}"
+                        print(f"ERROR: {self.status}")
+                if self.status.startswith("Starting IMU stream"):
+                    self.status = "Streaming IMU data"
+                    if self.csv_path is not None and self.csv_error is None:
+                        self.status += f"; recording to {self.csv_path}"
             self.last_sample_time = sample_time
+            self.condition.notify_all()
+
+    def _close_csv(self) -> None:
+        csv_file = self.csv_file
+        self.csv_file = None
+        self.csv_writer = None
+        if csv_file is not None:
+            csv_file.close()
+
+    def stop_stream(self, message: str = "IMU stream stopped") -> None:
+        with self.condition:
+            self.streaming = False
+            try:
+                self._close_csv()
+            except OSError as error:
+                self.csv_error = str(error)
+                message += f"; CSV close failed: {error}"
+                print(f"ERROR: {message}")
+            if self.csv_path is not None and self.csv_error is not None:
+                message += f"; CSV recording failed: {self.csv_error}"
+            elif self.csv_path is not None:
+                message += f"; saved {self.csv_path}"
+            self.status = message
             self.condition.notify_all()
 
     def set_status(
@@ -306,9 +411,20 @@ class SampleStore:
             self.status = message
             if streaming is not None:
                 self.streaming = streaming
+                if not streaming:
+                    try:
+                        self._close_csv()
+                    except OSError as error:
+                        self.csv_error = str(error)
+                        self.status += f"; CSV close failed: {error}"
+                        print(f"ERROR: {self.status}")
             if interval is not None:
                 self.interval = interval
             self.condition.notify_all()
+
+
+class CsvFileError(Exception):
+    pass
 
 
 class StreamController:
@@ -321,6 +437,8 @@ class StreamController:
         self,
         running: bool,
         interval: int | None = None,
+        create_csv: bool = False,
+        csv_base_name: str = "acc_data",
     ) -> dict[str, str | bool | int]:
         with self.lock:
             if self.store.streaming == running:
@@ -332,15 +450,15 @@ class StreamController:
             if running:
                 if interval is None or not 10 <= interval <= 60000:
                     raise ValueError("Sample interval must be between 10 and 60000 ms")
-                self.store.start_stream(interval)
+                self.store.start_stream(interval, create_csv, csv_base_name)
                 try:
                     self.port.write(f"imu stream {interval}\r".encode("ascii"))
                 except OSError:
-                    self.store.set_status("Could not start IMU stream", streaming=False)
+                    self.store.stop_stream("Could not start IMU stream")
                     raise
             else:
                 self.port.write(b"\x1b")
-                self.store.set_status("IMU stream stopped", streaming=False)
+                self.store.stop_stream()
             return {
                 "message": self.store.status,
                 "streaming": self.store.streaming,
@@ -461,17 +579,36 @@ def make_handler(
                 if action not in ("start", "stop"):
                     raise ValueError("Action must be 'start' or 'stop'")
                 interval = request.get("interval") if action == "start" else None
+                create_csv = request.get("createCsv", False) if action == "start" else False
+                csv_base_name = (
+                    request.get("csvBaseName", "acc_data") if action == "start" else "acc_data"
+                )
                 if action == "start" and (
                     type(interval) is not int or not 10 <= interval <= 60000
                 ):
                     raise ValueError("Sample interval must be an integer from 10 to 60000 ms")
+                if type(create_csv) is not bool:
+                    raise ValueError("Create CSV must be a boolean")
+                if create_csv and (
+                    not isinstance(csv_base_name, str)
+                    or not 1 <= len(csv_base_name) <= 64
+                    or not all(character.isalnum() or character in "_-" for character in csv_base_name)
+                ):
+                    raise ValueError(
+                        "CSV base name must be 1-64 letters, numbers, underscores, or hyphens"
+                    )
             except (ValueError, json.JSONDecodeError) as error:
                 self.send_json(400, {"error": str(error)})
                 return
             try:
-                state = stream_controller.set_running(action == "start", interval)
+                state = stream_controller.set_running(
+                    action == "start", interval, create_csv, csv_base_name
+                )
             except ValueError as error:
                 self.send_json(400, {"error": str(error)})
+                return
+            except CsvFileError as error:
+                self.send_json(500, {"error": str(error)})
                 return
             except OSError as error:
                 self.send_json(503, {"error": f"Serial communication failed: {error}"})
@@ -495,7 +632,7 @@ def read_serial(port: Any, store: SampleStore, stop: threading.Event) -> None:
             if sample is not None:
                 store.add(sample)
     except OSError as error:
-        store.set_status(f"Serial reader stopped: {error}", streaming=False)
+        store.stop_stream(f"Serial reader stopped: {error}")
         print(f"ERROR: Serial reader stopped: {error}")
 
 
