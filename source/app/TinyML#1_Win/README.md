@@ -1,8 +1,7 @@
 # TinyML gesture test (Windows / MinGW)
 
-This project runs the exported Edge Impulse C++ impulse against IMU CSV files on
-Windows. It is an offline baseline for checking prepared samples before wiring
-the classifier to the live serial plotter or porting it to the nRF board.
+This project runs the exported Edge Impulse C++ impulse against IMU CSV files or
+a live nRF serial stream on Windows.
 
 ## Requirements
 
@@ -59,3 +58,26 @@ final incomplete window is ignored.
 
 Use the same acceleration units, axis ordering, and sample rate used to collect
 the model's training data.
+
+## Live classification
+
+Connect the nRF board and close `imu_plot_server` or any other program using
+its serial port. Find the board's COM port in Windows Device Manager, then run:
+
+```powershell
+.\build\tinyml_gesture_test.exe --live COM5
+```
+
+The app opens the port at 115200 baud, starts `imu stream` at the model's
+configured 20 ms interval, and parses the board's timestamp/IMU text output.
+After collecting the first 50 acceleration samples, it classifies the latest
+one-second window every 12 new samples (about 240 ms). Press Ctrl+C to send the
+stop key to the board and exit. To use a different serial baud rate:
+
+```powershell
+.\build\tinyml_gesture_test.exe --live COM5 --baud 115200
+```
+
+The live serial module is isolated in `source/serial_port.hpp` and
+`source/serial_port.cpp` so other Windows applications can reuse the COM-port
+open, configure, line-read, and write behavior.

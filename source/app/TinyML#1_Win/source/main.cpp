@@ -1,21 +1,58 @@
 #include "edge-impulse-sdk/classifier/ei_run_classifier.h"
+#include "serial_port.hpp"
 
 #include <algorithm>
 #include <array>
 #include <cerrno>
 #include <cmath>
+#include <csignal>
 #include <cstdlib>
+#include <cstdint>
+#include <deque>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <iterator>
+#include <limits>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
 namespace {
 
 using SampleWindow = std::array<float, EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE>;
+using AccelerationSample = std::array<float, EI_CLASSIFIER_RAW_SAMPLES_PER_FRAME>;
+
+volatile std::sig_atomic_t stop_requested = 0;
+
+void handle_interrupt(int)
+{
+    stop_requested = 1;
+}
+
+class InterruptHandlerGuard {
+public:
+    InterruptHandlerGuard()
+        : previous_handler_(std::signal(SIGINT, handle_interrupt))
+    {
+        if (previous_handler_ == SIG_ERR) {
+            throw std::runtime_error("Could not register Ctrl+C handler");
+        }
+    }
+
+    ~InterruptHandlerGuard()
+    {
+        std::signal(SIGINT, previous_handler_);
+    }
+
+    InterruptHandlerGuard(const InterruptHandlerGuard &) = delete;
+    InterruptHandlerGuard &operator=(const InterruptHandlerGuard &) = delete;
+
+private:
+    using SignalHandler = void (*)(int);
+    SignalHandler previous_handler_;
+};
 
 std::string trim(const std::string &value)
 {
@@ -56,6 +93,36 @@ bool parse_number(const std::string &text, float &value)
     }
     value = parsed;
     return true;
+}
+
+bool parse_imu_stream_line(
+    const std::string &line,
+    AccelerationSample &sample)
+{
+    const size_t first_separator = line.find('|');
+    if (first_separator == std::string::npos) {
+        return false;
+    }
+    const size_t second_separator = line.find('|', first_separator + 1);
+    if (second_separator == std::string::npos) {
+        return false;
+    }
+
+    std::istringstream timestamp_stream(line.substr(0, first_separator));
+    std::uint64_t timestamp = 0;
+    if (!(timestamp_stream >> timestamp)) {
+        return false;
+    }
+    (void)timestamp;
+
+    std::istringstream acceleration_stream(
+        line.substr(first_separator + 1, second_separator - first_separator - 1));
+    if (!(acceleration_stream >> sample[0] >> sample[1] >> sample[2])) {
+        return false;
+    }
+    return std::isfinite(sample[0]) &&
+        std::isfinite(sample[1]) &&
+        std::isfinite(sample[2]);
 }
 
 size_t find_column(const std::vector<std::string> &header, const std::string &name)
@@ -167,13 +234,156 @@ bool classify_window(const SampleWindow &window, size_t window_number)
     return true;
 }
 
+class ImuStreamStopGuard {
+public:
+    explicit ImuStreamStopGuard(platform::SerialPort &serial_port)
+        : serial_port_(serial_port), active_(true)
+    {
+    }
+
+    ~ImuStreamStopGuard()
+    {
+        if (active_) {
+            try {
+                stop();
+            }
+            catch (const std::exception &error) {
+                std::cerr << "WARNING: Could not stop board IMU stream: "
+                          << error.what() << '\n';
+            }
+        }
+    }
+
+    void stop()
+    {
+        if (active_) {
+            serial_port_.write_all(std::string(1, '\x1b'));
+            active_ = false;
+        }
+    }
+
+private:
+    platform::SerialPort &serial_port_;
+    bool active_;
+};
+
+int run_live(const std::string &port_name, std::uint32_t baud_rate)
+{
+    if (EI_CLASSIFIER_RAW_SAMPLES_PER_FRAME != 3) {
+        throw std::runtime_error("Live IMU input requires a three-axis model");
+    }
+
+    platform::SerialPort serial_port(port_name, baud_rate);
+    stop_requested = 0;
+    InterruptHandlerGuard interrupt_guard;
+    ImuStreamStopGuard stream_guard(serial_port);
+
+    std::cout << "Opened " << port_name << " at " << baud_rate << " baud.\n"
+              << "Starting board IMU stream every " << EI_CLASSIFIER_INTERVAL_MS
+              << " ms. Press Ctrl+C to stop.\n";
+    serial_port.write_all(
+        "imu stream " + std::to_string(EI_CLASSIFIER_INTERVAL_MS) + "\r");
+
+    std::deque<AccelerationSample> recent_samples;
+    constexpr size_t samples_per_window = EI_CLASSIFIER_RAW_SAMPLE_COUNT;
+    constexpr size_t inference_step = EI_CLASSIFIER_SLICE_SIZE > 0
+        ? EI_CLASSIFIER_SLICE_SIZE
+        : 1;
+    size_t samples_since_inference = 0;
+    size_t window_number = 0;
+    std::string line;
+
+    while (!stop_requested) {
+        if (!serial_port.read_line(line, 100)) {
+            continue;
+        }
+
+        AccelerationSample sample{};
+        if (!parse_imu_stream_line(line, sample)) {
+            continue;
+        }
+
+        recent_samples.push_back(sample);
+        if (recent_samples.size() > samples_per_window) {
+            recent_samples.pop_front();
+        }
+        if (recent_samples.size() < samples_per_window) {
+            continue;
+        }
+
+        if (window_number == 0 || ++samples_since_inference >= inference_step) {
+            SampleWindow window{};
+            size_t sample_index = 0;
+            for (const auto &window_sample : recent_samples) {
+                for (size_t axis = 0; axis < window_sample.size(); ++axis) {
+                    window[sample_index * window_sample.size() + axis]
+                        = window_sample[axis];
+                }
+                ++sample_index;
+            }
+
+            ++window_number;
+            if (!classify_window(window, window_number)) {
+                return 1;
+            }
+            samples_since_inference = 0;
+        }
+    }
+
+    stream_guard.stop();
+    std::cout << "\nIMU stream stopped after " << window_number
+              << " inference window(s).\n";
+    return 0;
+}
+
+bool parse_baud_rate(const char *text, std::uint32_t &baud_rate)
+{
+    char *end = nullptr;
+    errno = 0;
+    const unsigned long parsed = std::strtoul(text, &end, 10);
+    if (errno == ERANGE || end == text || *end != '\0' || parsed == 0 ||
+        parsed > std::numeric_limits<std::uint32_t>::max()) {
+        return false;
+    }
+    baud_rate = static_cast<std::uint32_t>(parsed);
+    return true;
+}
+
+void print_usage()
+{
+    std::cerr << "Usage:\n"
+              << "  tinyml_gesture_test <imu.csv>\n"
+              << "  tinyml_gesture_test --live <COM port> [--baud <rate>]\n"
+              << "CSV input columns: timestamp, ax, ay, az\n";
+}
+
 } // namespace
 
 int main(int argc, char **argv)
 {
+    if (argc >= 2 && std::string(argv[1]) == "--live") {
+        std::uint32_t baud_rate = 115200;
+        if (argc != 3 && argc != 5) {
+            print_usage();
+            return 2;
+        }
+        if (argc == 5 &&
+            (std::string(argv[3]) != "--baud" ||
+             !parse_baud_rate(argv[4], baud_rate))) {
+            std::cerr << "ERROR: Baud rate must be a positive 32-bit integer.\n";
+            return 2;
+        }
+        try {
+            return run_live(argv[2], baud_rate);
+        }
+        catch (const std::exception &error) {
+            std::cerr << "ERROR: " << error.what() << '\n';
+            return 1;
+        }
+    }
+
     if (argc != 2) {
-        std::cerr << "Usage: tinyml_gesture_test <imu.csv>\n";
-        std::cerr << "Expected CSV columns include timestamp, ax, ay, az.\n";
+        print_usage();
         return 2;
     }
 
