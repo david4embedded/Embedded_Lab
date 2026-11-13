@@ -212,6 +212,24 @@ bool read_csv(const std::string &path, std::vector<std::array<float, 3>> &sample
     return true;
 }
 
+std::string display_label(const char *model_label)
+{
+    const std::string label(model_label);
+    if (label.rfind("acc_gesture_idle_", 0) == 0)
+    {
+        return "Idle";
+    }
+    if (label.rfind("acc_gesture_x_", 0) == 0)
+    {
+        return "Shake X";
+    }
+    if (label.rfind("acc_gesture_y_", 0) == 0)
+    {
+        return "Shake Y";
+    }
+    return label;
+}
+
 bool classify_window(const SampleWindow &window, size_t window_number)
 {
     signal_t signal{};
@@ -249,12 +267,12 @@ bool classify_window(const SampleWindow &window, size_t window_number)
         });
 
     std::cout << "window " << std::setw(4) << window_number
-              << "  prediction=" << best->label
+              << "  prediction=" << display_label(best->label)
               << "  confidence=" << std::fixed << std::setprecision(3)
               << best->value;
     for (size_t index = 0; index < EI_CLASSIFIER_LABEL_COUNT; ++index)
     {
-        std::cout << "  " << result.classification[index].label << '='
+        std::cout << "  " << display_label(result.classification[index].label) << '='
                   << std::fixed << std::setprecision(3)
                   << result.classification[index].value;
     }
