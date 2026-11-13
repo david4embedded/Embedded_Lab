@@ -47,6 +47,10 @@
   * The board has no J-Link. The on-board SAMD11 works as a CMSIS-DAP probe (VID:PID `2886:0066`), and the default runner is OpenOCD.
     `nrfutil device` / `nrfjprog` may not detect the board.
   * `openocd` must be on the PATH. The NCS toolchain does not include it
+  * On Windows, run `scripts\flash.bat` from any directory to set up the toolchain environment and flash this application's `build` directory. Extra `west flash` options can be passed through, for example:
+  ```
+  scripts\flash.bat --cmd-pre-init "adapter serial 716B57F9"
+  ```
   * With only one board connected:
   ```
   west flash -d [build directory]
@@ -86,6 +90,7 @@
   | `imu stream <ms>`        | Stream samples every `<ms>` (10 ~ 60000) until ESC is pressed                      |
   | `mic monitor [ms]`       | Print the sound level every `[ms]` (100 ~ 10000, multiple of 100, default 100) until ESC is pressed |
   * Streaming runs on a separate thread while the shell is in bypass mode (same approach as `net ping`). Every key input goes to the stream; only a single ESC stops it. Arrow/function keys (ESC [ ... sequences) are ignored.
+  * To view live IMU graphs in a browser instead of Tera Term, close Tera Term, install the Python dependency with `py -m pip install pyserial`, then run `py scripts\imu_plot_server.py --serial-port COM5`. Replace `COM5` with the board's serial port. Open `http://127.0.0.1:8000`, set the **Sample interval (ms)** (10 ~ 60000), and press **Start stream**; the selected interval is sent to the board. Press **Stop stream** to pause it. **Clear graph** clears the displayed history without stopping the stream. Ctrl+C in the terminal stops the server. The initial interval is 20 ms; use `--interval 50` to change it. Graphs default to a 10-second fixed window; use the **Show accumulated** button to switch to accumulated history, or adjust the window size in the UI. To keep drawing responsive, graphs redraw at up to 30 frames per second even when samples arrive faster. Use `--window-seconds 20` to set a different initial window or `--http-port 8080` to change the browser port.
   * `imu stream` example. With the board lying flat, accel Z should read about 1000 mg.
   ```
   uart:~$ imu stream 100
