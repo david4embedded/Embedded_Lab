@@ -1,11 +1,11 @@
 #include "edge-impulse-sdk/classifier/ei_run_classifier.h"
+#include "live_guards.hpp"
 #include "serial_port.hpp"
 
 #include <algorithm>
 #include <array>
 #include <cerrno>
 #include <cmath>
-#include <csignal>
 #include <cstdlib>
 #include <cstdint>
 #include <deque>
@@ -19,43 +19,103 @@
 #include <string>
 #include <vector>
 
-namespace
-{
-
 using SampleWindow = std::array<float, EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE>;
 using AccelerationSample = std::array<float, EI_CLASSIFIER_RAW_SAMPLES_PER_FRAME>;
 
-volatile std::sig_atomic_t stop_requested = 0;
+static std::string trim(const std::string &value);
+static std::vector<std::string> split_csv_row(const std::string &line);
+static bool parse_number(const std::string &text, float &value);
+static bool parse_imu_stream_line(const std::string &line, AccelerationSample &sample);
+static size_t find_column(const std::vector<std::string> &header, const std::string &name);
+static bool read_csv(const std::string &path, std::vector<std::array<float, 3>> &samples);
+static std::string display_label(const char *model_label);
+static bool classify_window(const SampleWindow &window, size_t window_number);
+static int run_live(const std::string &port_name, std::uint32_t baud_rate);
+static bool parse_baud_rate(const char *text, std::uint32_t &baud_rate);
+static void print_usage();
 
-void handle_interrupt(int)
+int main(int argc, char **argv)
 {
-    stop_requested = 1;
-}
-
-class InterruptHandlerGuard
-{
-public:
-    InterruptHandlerGuard()
-        : previous_handler_(std::signal(SIGINT, handle_interrupt))
+    if (argc >= 2 && std::string(argv[1]) == "--live")
     {
-        if (previous_handler_ == SIG_ERR)
+        std::uint32_t baud_rate = 115200;
+        if (argc != 3 && argc != 5)
         {
-            throw std::runtime_error("Could not register Ctrl+C handler");
+            print_usage();
+            return 2;
+        }
+        if (argc == 5 &&
+            (std::string(argv[3]) != "--baud" ||
+             !parse_baud_rate(argv[4], baud_rate)))
+        {
+            std::cerr << "ERROR: Baud rate must be a positive 32-bit integer.\n";
+            return 2;
+        }
+        try
+        {
+            return run_live(argv[2], baud_rate);
+        }
+        catch (const std::exception &error)
+        {
+            std::cerr << "ERROR: " << error.what() << '\n';
+            return 1;
         }
     }
 
-    ~InterruptHandlerGuard()
+    if (argc != 2)
     {
-        std::signal(SIGINT, previous_handler_);
+        print_usage();
+        return 2;
     }
 
-    InterruptHandlerGuard(const InterruptHandlerGuard &) = delete;
-    InterruptHandlerGuard &operator=(const InterruptHandlerGuard &) = delete;
+    std::vector<std::array<float, 3>> samples;
+    if (!read_csv(argv[1], samples))
+    {
+        return 1;
+    }
 
-private:
-    using SignalHandler = void (*)(int);
-    SignalHandler previous_handler_;
-};
+    constexpr size_t samples_per_window = EI_CLASSIFIER_RAW_SAMPLE_COUNT;
+    const size_t complete_windows = samples.size() / samples_per_window;
+    const size_t trailing_samples = samples.size() % samples_per_window;
+    if (complete_windows == 0)
+    {
+        std::cerr << "ERROR: Need at least " << samples_per_window
+                  << " samples; CSV contains " << samples.size() << ".\n";
+        return 1;
+    }
+
+    std::cout << "Model: " << EI_CLASSIFIER_PROJECT_NAME
+              << " (deployment " << EI_CLASSIFIER_PROJECT_DEPLOY_VERSION << ")\n"
+              << "Input: " << EI_CLASSIFIER_FREQUENCY << " Hz, "
+              << EI_CLASSIFIER_RAW_SAMPLE_COUNT << " samples/window, "
+              << EI_CLASSIFIER_RAW_SAMPLES_PER_FRAME << " axes (ax, ay, az)\n"
+              << "Loaded " << samples.size() << " rows; classifying "
+              << complete_windows << " non-overlapping window(s).\n";
+    if (trailing_samples != 0)
+    {
+        std::cout << "Note: ignoring " << trailing_samples
+                  << " trailing sample(s) that do not fill a window.\n";
+    }
+
+    for (size_t window_index = 0; window_index < complete_windows; ++window_index)
+    {
+        SampleWindow window{};
+        for (size_t sample_index = 0; sample_index < samples_per_window; ++sample_index)
+        {
+            const auto &sample = samples[window_index * samples_per_window + sample_index];
+            for (size_t axis = 0; axis < sample.size(); ++axis)
+            {
+                window[sample_index * sample.size() + axis] = sample[axis];
+            }
+        }
+        if (!classify_window(window, window_index + 1))
+        {
+            return 1;
+        }
+    }
+
+    return 0;
+}
 
 std::string trim(const std::string &value)
 {
@@ -103,9 +163,7 @@ bool parse_number(const std::string &text, float &value)
     return true;
 }
 
-bool parse_imu_stream_line(
-    const std::string &line,
-    AccelerationSample &sample)
+bool parse_imu_stream_line(const std::string &line, AccelerationSample &sample)
 {
     const size_t first_separator = line.find('|');
     if (first_separator == std::string::npos)
@@ -280,44 +338,6 @@ bool classify_window(const SampleWindow &window, size_t window_number)
     return true;
 }
 
-class ImuStreamStopGuard
-{
-public:
-    explicit ImuStreamStopGuard(platform::SerialPort &serial_port)
-        : serial_port_(serial_port), active_(true)
-    {
-    }
-
-    ~ImuStreamStopGuard()
-    {
-        if (active_)
-        {
-            try
-            {
-                stop();
-            }
-            catch (const std::exception &error)
-            {
-                std::cerr << "WARNING: Could not stop board IMU stream: "
-                          << error.what() << '\n';
-            }
-        }
-    }
-
-    void stop()
-    {
-        if (active_)
-        {
-            serial_port_.write_all(std::string(1, '\x1b'));
-            active_ = false;
-        }
-    }
-
-private:
-    platform::SerialPort &serial_port_;
-    bool active_;
-};
-
 int run_live(const std::string &port_name, std::uint32_t baud_rate)
 {
     if (EI_CLASSIFIER_RAW_SAMPLES_PER_FRAME != 3)
@@ -326,9 +346,8 @@ int run_live(const std::string &port_name, std::uint32_t baud_rate)
     }
 
     platform::SerialPort serial_port(port_name, baud_rate);
-    stop_requested = 0;
-    InterruptHandlerGuard interrupt_guard;
-    ImuStreamStopGuard stream_guard(serial_port);
+    platform::InterruptHandlerGuard interrupt_guard;
+    platform::ImuStreamStopGuard stream_guard(serial_port);
 
     std::cout << "Opened " << port_name << " at " << baud_rate << " baud.\n"
               << "Starting board IMU stream every " << EI_CLASSIFIER_INTERVAL_MS
@@ -345,7 +364,7 @@ int run_live(const std::string &port_name, std::uint32_t baud_rate)
     size_t window_number = 0;
     std::string line;
 
-    while (!stop_requested)
+    while (!interrupt_guard.is_stop_requested())
     {
         if (!serial_port.read_line(line, 100))
         {
@@ -417,89 +436,4 @@ void print_usage()
               << "  tinyml_gesture_test <imu.csv>\n"
               << "  tinyml_gesture_test --live <COM port> [--baud <rate>]\n"
               << "CSV input columns: timestamp, ax, ay, az\n";
-}
-
-} // namespace
-
-int main(int argc, char **argv)
-{
-    if (argc >= 2 && std::string(argv[1]) == "--live")
-    {
-        std::uint32_t baud_rate = 115200;
-        if (argc != 3 && argc != 5)
-        {
-            print_usage();
-            return 2;
-        }
-        if (argc == 5 &&
-            (std::string(argv[3]) != "--baud" ||
-             !parse_baud_rate(argv[4], baud_rate)))
-        {
-            std::cerr << "ERROR: Baud rate must be a positive 32-bit integer.\n";
-            return 2;
-        }
-        try
-        {
-            return run_live(argv[2], baud_rate);
-        }
-        catch (const std::exception &error)
-        {
-            std::cerr << "ERROR: " << error.what() << '\n';
-            return 1;
-        }
-    }
-
-    if (argc != 2)
-    {
-        print_usage();
-        return 2;
-    }
-
-    std::vector<std::array<float, 3>> samples;
-    if (!read_csv(argv[1], samples))
-    {
-        return 1;
-    }
-
-    constexpr size_t samples_per_window = EI_CLASSIFIER_RAW_SAMPLE_COUNT;
-    const size_t complete_windows = samples.size() / samples_per_window;
-    const size_t trailing_samples = samples.size() % samples_per_window;
-    if (complete_windows == 0)
-    {
-        std::cerr << "ERROR: Need at least " << samples_per_window
-                  << " samples; CSV contains " << samples.size() << ".\n";
-        return 1;
-    }
-
-    std::cout << "Model: " << EI_CLASSIFIER_PROJECT_NAME
-              << " (deployment " << EI_CLASSIFIER_PROJECT_DEPLOY_VERSION << ")\n"
-              << "Input: " << EI_CLASSIFIER_FREQUENCY << " Hz, "
-              << EI_CLASSIFIER_RAW_SAMPLE_COUNT << " samples/window, "
-              << EI_CLASSIFIER_RAW_SAMPLES_PER_FRAME << " axes (ax, ay, az)\n"
-              << "Loaded " << samples.size() << " rows; classifying "
-              << complete_windows << " non-overlapping window(s).\n";
-    if (trailing_samples != 0)
-    {
-        std::cout << "Note: ignoring " << trailing_samples
-                  << " trailing sample(s) that do not fill a window.\n";
-    }
-
-    for (size_t window_index = 0; window_index < complete_windows; ++window_index)
-    {
-        SampleWindow window{};
-        for (size_t sample_index = 0; sample_index < samples_per_window; ++sample_index)
-        {
-            const auto &sample = samples[window_index * samples_per_window + sample_index];
-            for (size_t axis = 0; axis < sample.size(); ++axis)
-            {
-                window[sample_index * sample.size() + axis] = sample[axis];
-            }
-        }
-        if (!classify_window(window, window_index + 1))
-        {
-            return 1;
-        }
-    }
-
-    return 0;
 }

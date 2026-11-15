@@ -61,6 +61,7 @@ list(APPEND EI_CXX_SOURCES
 )
 
 add_executable(tinyml_gesture_test
+    source/live_guards.cpp
     source/main.cpp
     source/serial_port.cpp
     "${EI_SDK_DIR}/tensorflow/lite/c/common.c"
