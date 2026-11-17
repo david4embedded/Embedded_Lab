@@ -1,4 +1,5 @@
 #include "AppShell.hpp"
+#include "GestureClassifier.hpp"
 
 #include <zephyr/kernel.h>
 #include <zephyr/shell/shell.h>
@@ -6,6 +7,8 @@
 #include <zephyr/sys/printk.h>
 
 #include <algorithm>
+#include <array>
+#include <array>
 #include <cmath>
 #include <cstdlib>
 
@@ -25,7 +28,7 @@ constexpr int32_t FULL_SCALE			= 32768;
 constexpr int32_t CLIP_LEVEL			= 32000;
 
 // Stream thread
-constexpr size_t STREAM_STACK_SIZE		= 4096;
+constexpr size_t STREAM_STACK_SIZE		= 8192;
 constexpr int STREAM_THREAD_PRIORITY	= 5;		// Lower than the shell thread (0)
 constexpr int32_t STOP_TIMEOUT_MS		= 2000;		// Longest mic read (1000 ms) + margin
 
@@ -34,6 +37,7 @@ constexpr uint8_t KEY_ESC				= 0x1B;
 enum class StreamType
 {
 	Imu,
+	Gesture,
 	Mic,
 };
 
@@ -222,6 +226,110 @@ bool RunImuStream(const struct shell* sh, uint32_t interval)
 	return true;
 }
 
+bool RunGestureStream(const struct shell* sh)
+{
+	static_assert(GestureClassifier::kAxisCount == 3, "Gesture model requires three IMU axes");
+	static_assert(GestureClassifier::kSampleCount > 0, "Gesture model window must not be empty");
+
+	shell_print(sh, "Gesture inference: %u Hz, %u samples/window. Press ESC to stop.",
+		EI_CLASSIFIER_FREQUENCY, static_cast<uint32_t>(GestureClassifier::kSampleCount));
+
+	std::array<float, GestureClassifier::kValueCount> ringBuffer = {};
+	std::array<float, GestureClassifier::kValueCount> orderedWindow = {};
+	size_t nextSample = 0;
+	size_t samplesCollected = 0;
+	size_t samplesSinceInference = 0;
+	uint32_t inferenceCount = 0;
+	int64_t next = k_uptime_get();
+
+	for (;;)
+	{
+		Imu::Sample sample = {};
+		const int ret = s_imu->Read(sample);
+		if (ret != 0)
+		{
+			shell_error(sh, "IMU read failed (%d)", ret);
+			return false;
+		}
+
+		const size_t sampleOffset = nextSample * GestureClassifier::kAxisCount;
+		for (size_t axis = 0; axis < GestureClassifier::kAxisCount; ++axis)
+		{
+			ringBuffer[sampleOffset + axis] = static_cast<float>(sample.accel_mg[axis]);
+		}
+		nextSample = (nextSample + 1) % GestureClassifier::kSampleCount;
+		if (samplesCollected < GestureClassifier::kSampleCount)
+		{
+			++samplesCollected;
+		}
+
+		if (samplesCollected == GestureClassifier::kSampleCount &&
+			(inferenceCount == 0 || ++samplesSinceInference >= GestureClassifier::kInferenceStep))
+		{
+			for (size_t sampleIndex = 0; sampleIndex < GestureClassifier::kSampleCount; ++sampleIndex)
+			{
+				const size_t sourceSample = (nextSample + sampleIndex) % GestureClassifier::kSampleCount;
+				for (size_t axis = 0; axis < GestureClassifier::kAxisCount; ++axis)
+				{
+					orderedWindow[sampleIndex * GestureClassifier::kAxisCount + axis] =
+						ringBuffer[sourceSample * GestureClassifier::kAxisCount + axis];
+				}
+			}
+
+			GestureClassifier::Result result = {};
+			const int classifyRet = GestureClassifier::Classify(
+				orderedWindow.data(), orderedWindow.size(), result);
+			if (classifyRet != 0)
+			{
+				shell_error(sh, "Gesture inference failed (%d)", classifyRet);
+				return false;
+			}
+
+			const int confidence = static_cast<int>(result.confidence * 1000.0f + 0.5f);
+			char output[192] = {};
+			int outputLength = snprintk(output, sizeof(output),
+				"window %u prediction=%s confidence=%d.%03d",
+				++inferenceCount, result.prediction, confidence / 1000, confidence % 1000);
+			if (outputLength < 0 || static_cast<size_t>(outputLength) >= sizeof(output))
+			{
+				shell_error(sh, "Gesture output does not fit on one line");
+				return false;
+			}
+
+			for (size_t index = 0; index < GestureClassifier::kClassCount; ++index)
+			{
+				const int score = static_cast<int>(result.scores[index] * 1000.0f + 0.5f);
+				const size_t remaining = sizeof(output) - static_cast<size_t>(outputLength);
+				const int appended = snprintk(output + outputLength, remaining,
+					" | %s=%d.%03d",
+					result.labels[index], score / 1000, score % 1000);
+				if (appended < 0 || static_cast<size_t>(appended) >= remaining)
+				{
+					shell_error(sh, "Gesture output does not fit on one line");
+					return false;
+				}
+				outputLength += appended;
+			}
+			shell_print(sh, "%s", output);
+			samplesSinceInference = 0;
+		}
+
+		next += EI_CLASSIFIER_INTERVAL_MS;
+		const int64_t now = k_uptime_get();
+		if (next < now)
+		{
+			next = now + EI_CLASSIFIER_INTERVAL_MS;
+		}
+		if (WaitForStop(next))
+		{
+			break;
+		}
+	}
+
+	shell_print(sh, "Gesture inference stopped after %u window(s)", inferenceCount);
+	return true;
+}
+
 /**
  * @brief Print the mic level until ESC is pressed
  * @return true if stopped by ESC, false on error
@@ -315,6 +423,10 @@ void StreamThread(void* p1, void* p2, void* p3)
 	if (request->type == StreamType::Imu)
 	{
 		(void)RunImuStream(request->sh, request->interval);
+	}
+	else if (request->type == StreamType::Gesture)
+	{
+		(void)RunGestureStream(request->sh);
 	}
 	else
 	{
@@ -420,6 +532,20 @@ int CmdImuStream(const struct shell* sh, size_t argc, char** argv)
 	return StartStream(sh, StreamType::Imu, interval);
 }
 
+int CmdImuClassify(const struct shell* sh, size_t argc, char** argv)
+{
+	ARG_UNUSED(argc);
+	ARG_UNUSED(argv);
+
+	if (!CheckImu(sh))
+	{
+		return -ENODEV;
+	}
+
+	shell_print(sh, "Starting live gesture inference. Press ESC to stop.");
+	return StartStream(sh, StreamType::Gesture, EI_CLASSIFIER_INTERVAL_MS);
+}
+
 int CmdMicMonitor(const struct shell* sh, size_t argc, char** argv)
 {
 	if (!CheckMic(sh))
@@ -444,6 +570,7 @@ int CmdMicMonitor(const struct shell* sh, size_t argc, char** argv)
 SHELL_STATIC_SUBCMD_SET_CREATE(sub_imu,
 	SHELL_CMD(info, NULL, "Show IMU chip information", CmdImuInfo),
 	SHELL_CMD(read, NULL, "Read one accel/gyro/temperature sample", CmdImuRead),
+	SHELL_CMD(classify, NULL, "Classify live gestures until ESC is pressed", CmdImuClassify),
 	SHELL_CMD_ARG(stream, NULL,
 		"Stream samples until ESC is pressed\n"
 		"Usage: imu stream <interval_ms> (10 ~ 60000)",

@@ -88,6 +88,7 @@
   | `imu info`               | WHO_AM_I and chip name                                                             |
   | `imu read`               | One accel/gyro/temperature sample                                                  |
   | `imu stream <ms>`        | Stream samples every `<ms>` (10 ~ 60000) until ESC is pressed                      |
+  | `imu classify`           | Classify a rolling 50-sample accelerometer window at 50 Hz until ESC is pressed    |
   | `mic monitor [ms]`       | Print the sound level every `[ms]` (100 ~ 10000, multiple of 100, default 100) until ESC is pressed |
   * Streaming runs on a separate thread while the shell is in bypass mode (same approach as `net ping`). Every key input goes to the stream; only a single ESC stops it. Arrow/function keys (ESC [ ... sequences) are ignored.
   * To view live IMU graphs in a browser instead of Tera Term, close Tera Term, install the Python dependency with `py -m pip install pyserial`, then run `py scripts\imu_plot_server.py --serial-port COM5`. Replace `COM5` with the board's serial port. Open `http://127.0.0.1:8000`, set the **Sample interval (ms)** (10 ~ 60000), and press **Start stream**; the selected interval is sent to the board. Press **Stop stream** to pause it. **Clear graph** clears the displayed history without stopping the stream. Ctrl+C in the terminal stops the server. The initial interval is 20 ms; use `--interval 50` to change it. Graphs default to a 10-second fixed window; use the **Show accumulated** button to switch to accumulated history, or adjust the window size in the UI. To keep drawing responsive, graphs redraw at up to 30 frames per second even when samples arrive faster. Use `--window-seconds 20` to set a different initial window or `--http-port 8080` to change the browser port.
@@ -97,6 +98,13 @@
   Streaming IMU every 100 ms. Press ESC to stop.
     time[ms] |  ax[mg]  ay[mg]  az[mg] | gx[mdps] gy[mdps] gz[mdps] | temp[C]
            0 |     -32      -8    1056 |      122    -2362      700 |  19.50
+  ```
+  * `imu classify` uses the exported Edge Impulse C++ library and the same 20 ms, 50-sample, `ax, ay, az` input used by the Windows test app. It prints the prediction and all per-class scores on one line after the first one-second window, then every 12 new samples (about 240 ms). Press ESC to stop.
+  ```text
+  uart:~$ imu classify
+  Starting live gesture inference. Press ESC to stop.
+  Gesture inference: 50 Hz, 50 samples/window. Press ESC to stop.
+  window 1 prediction=Shake X confidence=0.712 | Idle=0.251 | Shake X=0.712 | Shake Y=0.037
   ```
   * `mic monitor` shows a level meter in the terminal.
     Raw PCM (16 kHz x 16 bit = 32 KB/s) does not fit into the 115200 baud UART (about 11.5 KB/s), so the level is computed on the board per 100 ms block.

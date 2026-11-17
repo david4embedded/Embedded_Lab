@@ -129,7 +129,7 @@ int main(void)
 	printk("[%s] Mic    PDM 16 kHz mono, ret=%d, peak=%d%s\n",
 		ResultString(micOk), micRet, micLevel.peak, micLevel.flat ? " (FLAT)" : "");
 	printk("----------------------------------------------\n");
-	printk("Shell commands: imu info | imu read | imu stream <ms> | mic monitor [ms]\n");
+	printk("Shell commands: imu info | imu read | imu stream <ms> | imu classify | mic monitor [ms]\n");
 	printk("Press ESC to stop streaming.\n\n");
 
 	AppShell::Initialize(s_imu, imuOk, s_mic, micOk);

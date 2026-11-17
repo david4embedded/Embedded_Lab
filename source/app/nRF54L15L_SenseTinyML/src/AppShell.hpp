@@ -9,6 +9,7 @@
  *          - imu info               : WHO_AM_I and chip name
  *          - imu read               : one accel/gyro/temperature sample
  *          - imu stream <ms>        : stream samples every <ms> until ESC is pressed
+ *          - imu classify           : classify live IMU gestures until ESC is pressed
  *          - mic monitor [ms]       : print the sound level every [ms] until ESC is pressed
  *          Streaming runs on a separate thread while the shell is in bypass mode,
  *          so every key input goes to the stream and only ESC stops it.
