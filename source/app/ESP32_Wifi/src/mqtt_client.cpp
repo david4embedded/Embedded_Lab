@@ -1,50 +1,70 @@
+/**
+ * @file mqtt_client.cpp
+ * @brief Implements the ESP32 MQTT task, publishing, and message handling.
+ * @date 2026-10-28
+ * @author Sungsu Kim
+ */
+
 #include <Arduino.h>
 #include <PubSubClient.h>
 #include <WiFi.h>
 
+#include <cstdio>
+
 #include "mqtt_client.h"
-#include "secure_info.h"
 
-static constexpr uint32_t MqttReconnectIntervalMs = 5000;
-static constexpr uint32_t MqttPublishIntervalMs = 1000;
-static constexpr uint16_t MqttTaskStackSize = 4096;
-static constexpr UBaseType_t MqttTaskPriority = 1;
+static constexpr uint32_t s_mqttReconnectIntervalMs = 5000U;
+static constexpr uint32_t s_mqttPublishIntervalMs = 1000U;
+static constexpr uint16_t s_mqttTaskStackSize = 4096U;
+static constexpr UBaseType_t s_mqttTaskPriority = 1U;
+static constexpr std::size_t s_mqttTopicBufferSize = 128U;
 
-static WiFiClient mqttWiFiClient;
-static PubSubClient mqttClient(mqttWiFiClient);
+static WiFiClient s_mqttWiFiClient;
+static PubSubClient s_mqttClient(s_mqttWiFiClient);
 
-static void mqttTask(void *parameter);
-static void mqttMessageCallback(char *topic, byte *payload, unsigned int length);
-static bool connectMqtt();
+static void runMqttTask(void *parameter);
+static void handleMqttMessage(char *topic, byte *payload, unsigned int length);
+static bool connectToMqttBroker();
+static bool formatTopic(const char *baseTopic, const char *suffix, char *buffer, std::size_t bufferSize);
 
-void mqttClientBegin()
+/**
+ * @brief Configures and starts the MQTT task.
+ * @retval None
+ */
+void beginMqttClient()
 {
-    mqttClient.setServer(MQTT_BROKER, MQTT_PORT);
-    mqttClient.setCallback(mqttMessageCallback);
+    (void)s_mqttClient.setServer(MQTT_BROKER, MQTT_PORT);
+    (void)s_mqttClient.setCallback(handleMqttMessage);
 
-    const BaseType_t result = xTaskCreatePinnedToCore(
-        mqttTask,
+    const auto result = xTaskCreatePinnedToCore(
+        runMqttTask,
         "MqttTask",
-        MqttTaskStackSize,
+        s_mqttTaskStackSize,
         nullptr,
-        MqttTaskPriority,
+        s_mqttTaskPriority,
         nullptr,
         0);
 
     if (result != pdPASS)
     {
-        Serial.println("Failed to create MQTT task");
+        (void)Serial.println("Failed to create MQTT task");
     }
 }
 
-static void mqttTask(void *parameter)
+/**
+ * @brief Runs the MQTT connection, message handling, and heartbeat publishing loop.
+ * @retval None
+ */
+static void runMqttTask(void *parameter)
 {
-    uint32_t lastReconnectMs = 0;
-    uint32_t lastPublishMs = 0;
+    (void)parameter;
+
+    auto lastReconnectMs = 0U;
+    auto lastPublishMs = 0U;
 
     for (;;)
     {
-        const uint32_t now = millis();
+        const auto now = millis();
 
         if (WiFi.status() != WL_CONNECTED)
         {
@@ -52,66 +72,130 @@ static void mqttTask(void *parameter)
             continue;
         }
 
-        if (!mqttClient.connected())
+        if (!s_mqttClient.connected())
         {
-            if (now - lastReconnectMs >= MqttReconnectIntervalMs)
+            if (now - lastReconnectMs >= s_mqttReconnectIntervalMs)
             {
                 lastReconnectMs = now;
-                connectMqtt();
+                (void)connectToMqttBroker();
             }
 
             vTaskDelay(pdMS_TO_TICKS(100));
             continue;
         }
 
-        mqttClient.loop();
+        (void)s_mqttClient.loop();
 
-        if (now - lastPublishMs >= MqttPublishIntervalMs)
+        if (now - lastPublishMs >= s_mqttPublishIntervalMs)
         {
             lastPublishMs = now;
 
-            const String heartbeatTopic = String(MQTT_TOPIC_PREFIX);
-            const String uptimeSeconds = String(now / 1000);
-            mqttClient.publish(heartbeatTopic.c_str(), uptimeSeconds.c_str());
-            Serial.println("Published Topic: " + heartbeatTopic + " Msg: " + uptimeSeconds);
+            char uptimeSeconds[11];
+            const auto written = std::snprintf(
+                uptimeSeconds,
+                sizeof(uptimeSeconds),
+                "%lu",
+                static_cast<unsigned long>(now / 1000U));
+
+            if (written < 0 || static_cast<std::size_t>(written) >= sizeof(uptimeSeconds))
+            {
+                (void)Serial.println("Failed to format MQTT heartbeat");
+            }
+            else if (!s_mqttClient.publish(MQTT_TOPIC_PREFIX, uptimeSeconds))
+            {
+                (void)Serial.println("Failed to publish MQTT heartbeat");
+            }
+            else
+            {
+                (void)Serial.print("Published Topic: ");
+                (void)Serial.print(MQTT_TOPIC_PREFIX);
+                (void)Serial.print(" Msg: ");
+                (void)Serial.println(uptimeSeconds);
+            }
         }
 
         vTaskDelay(pdMS_TO_TICKS(10));
     }
 }
 
-static void mqttMessageCallback(char *topic, byte *payload, unsigned int length)
+/**
+ * @brief Prints an incoming MQTT message to the serial port.
+ * @retval None
+ */
+static void handleMqttMessage(char *topic, byte *payload, unsigned int length)
 {
-    Serial.print("MQTT message on ");
-    Serial.print(topic);
-    Serial.print(": ");
+    (void)Serial.print("MQTT message on ");
+    (void)Serial.print(topic);
+    (void)Serial.print(": ");
 
     for (unsigned int index = 0; index < length; ++index)
     {
-        Serial.write(payload[index]);
+        (void)Serial.write(payload[index]);
     }
 
-    Serial.println();
+    (void)Serial.println();
 }
 
-static bool connectMqtt()
+/**
+ * @brief Connects to the MQTT broker and subscribes to command messages.
+ * @retval true if the connection and topic setup succeed; otherwise false.
+ */
+static bool connectToMqttBroker()
 {
     char clientId[32];
-    snprintf(clientId, sizeof(clientId), "esp32-%08lX", static_cast<unsigned long>(ESP.getEfuseMac()));
+    const auto clientIdLength = std::snprintf(
+        clientId,
+        sizeof(clientId),
+        "esp32-%08lX",
+        static_cast<unsigned long>(ESP.getEfuseMac()));
 
-    Serial.print("Connecting to MQTT broker...");
-    if (!mqttClient.connect(clientId))
+    if (clientIdLength < 0 || static_cast<std::size_t>(clientIdLength) >= sizeof(clientId))
     {
-        Serial.print(" failed, state=");
-        Serial.println(mqttClient.state());
+        (void)Serial.println("Failed to format MQTT client ID");
         return false;
     }
 
-    const String commandTopic = String(MQTT_TOPIC_PREFIX) + "/command";
-    const String statusTopic = String(MQTT_TOPIC_PREFIX) + "/status";
+    char commandTopic[s_mqttTopicBufferSize];
+    char statusTopic[s_mqttTopicBufferSize];
+    if (!formatTopic(MQTT_TOPIC_PREFIX, "command", commandTopic, sizeof(commandTopic)) ||
+        !formatTopic(MQTT_TOPIC_PREFIX, "status", statusTopic, sizeof(statusTopic)))
+    {
+        (void)Serial.println("Failed to format MQTT topic");
+        return false;
+    }
 
-    mqttClient.subscribe(commandTopic.c_str());
-    mqttClient.publish(statusTopic.c_str(), "online", true);
-    Serial.println(" connected");
+    (void)Serial.print("Connecting to MQTT broker...");
+    if (!s_mqttClient.connect(clientId))
+    {
+        (void)Serial.print(" failed, state=");
+        (void)Serial.println(s_mqttClient.state());
+        return false;
+    }
+
+    if (!s_mqttClient.subscribe(commandTopic))
+    {
+        (void)Serial.println("Failed to subscribe to MQTT command topic");
+        (void)s_mqttClient.disconnect();
+        return false;
+    }
+
+    if (!s_mqttClient.publish(statusTopic, "online", true))
+    {
+        (void)Serial.println("Failed to publish MQTT status");
+        (void)s_mqttClient.disconnect();
+        return false;
+    }
+
+    (void)Serial.println(" connected");
     return true;
+}
+
+/**
+ * @brief Formats a topic by appending a suffix to its base.
+ * @retval true if the topic fits in the buffer; otherwise false.
+ */
+static bool formatTopic(const char *baseTopic, const char *suffix, char *buffer, std::size_t bufferSize)
+{
+    const auto written = std::snprintf(buffer, bufferSize, "%s/%s", baseTopic, suffix);
+    return written >= 0 && static_cast<std::size_t>(written) < bufferSize;
 }

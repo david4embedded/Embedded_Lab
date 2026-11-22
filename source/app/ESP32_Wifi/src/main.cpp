@@ -1,68 +1,89 @@
+/**
+ * @file main.cpp
+ * @brief ESP32 Wi-Fi TCP echo server and Arduino application entry points.
+ * @date 2026-10-28
+ * @author Sungsu Kim
+ */
+
 #include <Arduino.h>
 #include <WiFi.h>
+
 #include "mqtt_client.h"
 #include "secure_info.h"
 
-const int ledPin = 23;
-WiFiServer server(7);
+constexpr auto g_ledPin = 23;
+WiFiServer g_server(7);
 
+/**
+ * @brief Initializes the serial port, Wi-Fi, TCP server, and MQTT client.
+ * @retval None
+ */
 void setup()
 {
     Serial.begin(115200);
 
-    pinMode(ledPin, OUTPUT);
-    digitalWrite(ledPin, LOW);
+    pinMode(g_ledPin, OUTPUT);
+    digitalWrite(g_ledPin, LOW);
 
-    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-    Serial.print("Connecting to Wi-Fi");
+    (void)WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    (void)Serial.print("Connecting to Wi-Fi");
 
     while (WiFi.status() != WL_CONNECTED)
     {
         delay(500);
-        Serial.print(".");
+        (void)Serial.print(".");
     }
 
-    Serial.println();
-    Serial.println("Connected!");
-    Serial.print("IP address: ");
-    Serial.println(WiFi.localIP());
+    (void)Serial.println();
+    (void)Serial.println("Connected!");
+    (void)Serial.print("IP address: ");
+    (void)Serial.println(WiFi.localIP());
 
-    server.begin();
-    Serial.println("TCP echo server listening on port 7");
+    g_server.begin();
+    (void)Serial.println("TCP echo server listening on port 7");
 
-    mqttClientBegin();
+    beginMqttClient();
 }
 
+/**
+ * @brief Toggles the LED and echoes data from an available TCP client.
+ * @retval None
+ */
 void loop()
 {
-    static unsigned long lastToggleMs = 0;
-    const unsigned long toggleIntervalMs = 1000;
+    static auto s_lastToggleMs = 0UL;
+    constexpr auto toggleIntervalMs = 1000UL;
 
-    if (millis() - lastToggleMs >= toggleIntervalMs)
+    if (millis() - s_lastToggleMs >= toggleIntervalMs)
     {
-        lastToggleMs = millis();
-        digitalWrite(ledPin, !digitalRead(ledPin));
+        s_lastToggleMs = millis();
+        digitalWrite(g_ledPin, !digitalRead(g_ledPin));
     }
 
-    WiFiClient client = server.available();
+    auto client = g_server.available();
     if (!client)
     {
         return;
     }
 
-    Serial.println("Client connected");
-    Serial.print("MSG from client: ");
+    (void)Serial.println("Client connected");
+    (void)Serial.print("MSG from client: ");
     while (client.connected())
     {
         while (client.available())
         {
-            auto data = client.read();
-            Serial.write(static_cast<uint8_t>(data));
-            client.write(data);
+            const auto data = client.read();
+            if (data < 0)
+            {
+                break;
+            }
+
+            (void)Serial.write(static_cast<uint8_t>(data));
+            (void)client.write(static_cast<uint8_t>(data));
         }
         delay(1);
     }
 
     client.stop();
-    Serial.println("Client disconnected");
+    (void)Serial.println("Client disconnected");
 }

@@ -1,3 +1,14 @@
+/**
+ * @file mqtt_client.h
+ * @brief Declares the MQTT client startup interface.
+ * @date 2026-10-28
+ * @author Sungsu Kim
+ */
+
 #pragma once
 
-void mqttClientBegin();
+/**
+ * @brief Configures and starts the MQTT client task.
+ * @retval None
+ */
+void beginMqttClient();
