@@ -81,3 +81,9 @@ stop key to the board and exit. To use a different serial baud rate:
 The live serial module is isolated in `source/serial_port.hpp` and
 `source/serial_port.cpp` so other Windows applications can reuse the COM-port
 open, configure, line-read, and write behavior.
+
+## Third-party licenses
+
+Third-party license locations and attribution requirements are summarized in
+`NOTICE.md`. The original license files under `edge-impulse-sdk/` remain the
+authoritative component-specific notices.
