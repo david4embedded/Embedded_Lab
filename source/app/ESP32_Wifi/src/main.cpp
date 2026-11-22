@@ -47,7 +47,7 @@ void setup()
     Serial.print("TCP echo server listening on port ");
     Serial.println(TCP_SERVER_PORT);
 
-    beginMqttClient();
+    mqttClientBegin();
 }
 
 /**

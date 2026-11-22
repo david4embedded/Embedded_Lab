@@ -11,4 +11,4 @@
  * @brief Configures and starts the MQTT client task.
  * @retval None
  */
-void beginMqttClient();
+void mqttClientBegin();

@@ -35,7 +35,7 @@ static bool formatTopic(const char *baseTopic, const char *suffix, char *buffer,
  * @brief Configures and starts the MQTT task.
  * @retval None
  */
-void beginMqttClient()
+void mqttClientBegin()
 {
     s_mqttClient.setServer(MQTT_BROKER, MQTT_PORT);
     s_mqttClient.setCallback(handleMqttMessage);
