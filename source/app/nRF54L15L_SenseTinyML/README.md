@@ -118,3 +118,7 @@
          100 |    12 |     3 |     -80.8 | ####...............................
   ```
   * If the mic level does not change while talking near the board, change `MIC_CHANNEL` in `src/Mic.cpp` to `PDM_CHAN_RIGHT`.
+
+* Third-party licenses
+  * Third-party license locations and attribution requirements are summarized in `NOTICE.md`.
+  * The original license files under `edge-impulse-sdk/` remain the authoritative component-specific notices.
