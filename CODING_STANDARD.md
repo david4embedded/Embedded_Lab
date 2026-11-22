@@ -8,7 +8,6 @@
 
 - Use Allman brace style.
 - Indent `case` labels four spaces inside `switch`; do not add braces around case blocks.
-- Aim for a line length of about 150 characters, using flexibility to match surrounding code.
 
 ## 3. Naming
 
@@ -18,10 +17,12 @@
 - Class and struct member variables start with `m_`.
 - Global variables start with `g_`.
 - Static variables start with `s_`, including class and struct members; this takes precedence over the other variable prefixes.
+- Constant names use UPPER_SNAKE_CASE.
 - file names use snake case and start with a low case.
 
 ## 4. Types, declarations, and interfaces
 
+- Define constants as named `constexpr` values near the top of the file when practical; clear delay or wait values may remain inline.
 - Use `static_assert` to verify compile-time assumptions.
 - Use inheritance specifiers such as `override` and `final` where appropriate; avoid multiple inheritance when practical.
 - Mark constructors `explicit` when implicit conversions are not intended.

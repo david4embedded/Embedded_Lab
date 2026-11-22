@@ -11,8 +11,12 @@
 #include "mqtt_client.h"
 #include "secure_info.h"
 
-constexpr auto g_ledPin = 23;
-WiFiServer g_server(7);
+static constexpr uint8_t LED_PIN = 23U;
+static constexpr uint16_t TCP_SERVER_PORT = 7U;
+static constexpr uint32_t SERIAL_BAUD_RATE = 115200U;
+static constexpr unsigned long LED_TOGGLE_INTERVAL_MS = 1000UL;
+
+WiFiServer g_server(TCP_SERVER_PORT);
 
 /**
  * @brief Initializes the serial port, Wi-Fi, TCP server, and MQTT client.
@@ -20,10 +24,10 @@ WiFiServer g_server(7);
  */
 void setup()
 {
-    Serial.begin(115200);
+    Serial.begin(SERIAL_BAUD_RATE);
 
-    pinMode(g_ledPin, OUTPUT);
-    digitalWrite(g_ledPin, LOW);
+    pinMode(LED_PIN, OUTPUT);
+    digitalWrite(LED_PIN, LOW);
 
     WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
     Serial.print("Connecting to Wi-Fi");
@@ -40,7 +44,8 @@ void setup()
     Serial.println(WiFi.localIP());
 
     g_server.begin();
-    Serial.println("TCP echo server listening on port 7");
+    Serial.print("TCP echo server listening on port ");
+    Serial.println(TCP_SERVER_PORT);
 
     beginMqttClient();
 }
@@ -52,12 +57,10 @@ void setup()
 void loop()
 {
     static auto s_lastToggleMs = 0UL;
-    constexpr auto toggleIntervalMs = 1000UL;
-
-    if (millis() - s_lastToggleMs >= toggleIntervalMs)
+    if (millis() - s_lastToggleMs >= LED_TOGGLE_INTERVAL_MS)
     {
         s_lastToggleMs = millis();
-        digitalWrite(g_ledPin, !digitalRead(g_ledPin));
+        digitalWrite(LED_PIN, !digitalRead(LED_PIN));
     }
 
     auto client = g_server.available();

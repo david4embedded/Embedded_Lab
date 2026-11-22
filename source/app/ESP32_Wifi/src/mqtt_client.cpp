@@ -13,11 +13,15 @@
 
 #include "mqtt_client.h"
 
-static constexpr uint32_t s_mqttReconnectIntervalMs = 5000U;
-static constexpr uint32_t s_mqttPublishIntervalMs = 1000U;
-static constexpr uint16_t s_mqttTaskStackSize = 4096U;
-static constexpr UBaseType_t s_mqttTaskPriority = 1U;
-static constexpr std::size_t s_mqttTopicBufferSize = 128U;
+static constexpr uint32_t MQTT_RECONNECT_INTERVAL_MS = 5000U;
+static constexpr uint32_t MQTT_PUBLISH_INTERVAL_MS = 1000U;
+static constexpr uint16_t MQTT_TASK_STACK_SIZE = 4096U;
+static constexpr UBaseType_t MQTT_TASK_PRIORITY = 1U;
+static constexpr BaseType_t MQTT_TASK_CORE = 0;
+static constexpr std::size_t MQTT_TOPIC_BUFFER_SIZE = 128U;
+static constexpr std::size_t MQTT_CLIENT_ID_BUFFER_SIZE = 32U;
+static constexpr std::size_t UPTIME_BUFFER_SIZE = 11U;
+static constexpr uint32_t MILLISECONDS_PER_SECOND = 1000U;
 
 static WiFiClient s_mqttWiFiClient;
 static PubSubClient s_mqttClient(s_mqttWiFiClient);
@@ -36,14 +40,7 @@ void beginMqttClient()
     s_mqttClient.setServer(MQTT_BROKER, MQTT_PORT);
     s_mqttClient.setCallback(handleMqttMessage);
 
-    const auto result = xTaskCreatePinnedToCore(
-        runMqttTask,
-        "MqttTask",
-        s_mqttTaskStackSize,
-        nullptr,
-        s_mqttTaskPriority,
-        nullptr,
-        0);
+    const auto result = xTaskCreatePinnedToCore(runMqttTask, "MqttTask", MQTT_TASK_STACK_SIZE, nullptr, MQTT_TASK_PRIORITY, nullptr, MQTT_TASK_CORE);
 
     if (result != pdPASS)
     {
@@ -72,7 +69,7 @@ static void runMqttTask(void *)
 
         if (!s_mqttClient.connected())
         {
-            if (now - lastReconnectMs >= s_mqttReconnectIntervalMs)
+            if (now - lastReconnectMs >= MQTT_RECONNECT_INTERVAL_MS)
             {
                 lastReconnectMs = now;
                 connectToMqttBroker();
@@ -84,16 +81,12 @@ static void runMqttTask(void *)
 
         s_mqttClient.loop();
 
-        if (now - lastPublishMs >= s_mqttPublishIntervalMs)
+        if (now - lastPublishMs >= MQTT_PUBLISH_INTERVAL_MS)
         {
             lastPublishMs = now;
 
-            char uptimeSeconds[11];
-            const auto written = std::snprintf(
-                uptimeSeconds,
-                sizeof(uptimeSeconds),
-                "%lu",
-                static_cast<unsigned long>(now / 1000U));
+            char uptimeSeconds[UPTIME_BUFFER_SIZE];
+            const auto written = std::snprintf(uptimeSeconds, sizeof(uptimeSeconds), "%lu", static_cast<unsigned long>(now / MILLISECONDS_PER_SECOND));
 
             if (written < 0 || static_cast<std::size_t>(written) >= sizeof(uptimeSeconds))
             {
@@ -140,12 +133,8 @@ static void handleMqttMessage(char *topic, byte *payload, unsigned int length)
  */
 static bool connectToMqttBroker()
 {
-    char clientId[32];
-    const auto clientIdLength = std::snprintf(
-        clientId,
-        sizeof(clientId),
-        "esp32-%08lX",
-        static_cast<unsigned long>(ESP.getEfuseMac()));
+    char clientId[MQTT_CLIENT_ID_BUFFER_SIZE];
+    const auto clientIdLength = std::snprintf(clientId, sizeof(clientId), "esp32-%08lX", static_cast<unsigned long>(ESP.getEfuseMac()));
 
     if (clientIdLength < 0 || static_cast<std::size_t>(clientIdLength) >= sizeof(clientId))
     {
@@ -153,8 +142,8 @@ static bool connectToMqttBroker()
         return false;
     }
 
-    char commandTopic[s_mqttTopicBufferSize];
-    char statusTopic[s_mqttTopicBufferSize];
+    char commandTopic[MQTT_TOPIC_BUFFER_SIZE];
+    char statusTopic[MQTT_TOPIC_BUFFER_SIZE];
     if (!formatTopic(MQTT_TOPIC_PREFIX, "command", commandTopic, sizeof(commandTopic)) ||
         !formatTopic(MQTT_TOPIC_PREFIX, "status", statusTopic, sizeof(statusTopic)))
     {
