@@ -18,6 +18,7 @@
 - Class and struct member variables start with `m_`.
 - Global variables start with `g_`.
 - Static variables start with `s_`, including class and struct members; this takes precedence over the other variable prefixes.
+- file names use snake case and start with a low case.
 
 ## 4. Types, declarations, and interfaces
 
@@ -34,7 +35,7 @@
 - Specify lambda return types using trailing return type syntax (`-> Type`).
 - Capture one or two variables explicitly by reference; when capturing more than two, use `[&]`.
 - Declare return-value locals near the start of a function when practical; declare other locals close to their first use.
-- Use the appropriate C++ cast for the conversion; use `(void)` to explicitly discard a function's return value.
+- Use the appropriate C++ cast for the conversion.
 - Declare file-local `static` functions before function definitions; define global functions first, followed by `static` functions.
 - Avoid anonymous namespaces; use `static` for file-local symbols.
 - Prefer fixed-width integer types from `stdint`.

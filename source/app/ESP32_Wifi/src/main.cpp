@@ -25,22 +25,22 @@ void setup()
     pinMode(g_ledPin, OUTPUT);
     digitalWrite(g_ledPin, LOW);
 
-    (void)WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-    (void)Serial.print("Connecting to Wi-Fi");
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    Serial.print("Connecting to Wi-Fi");
 
     while (WiFi.status() != WL_CONNECTED)
     {
         delay(500);
-        (void)Serial.print(".");
+        Serial.print(".");
     }
 
-    (void)Serial.println();
-    (void)Serial.println("Connected!");
-    (void)Serial.print("IP address: ");
-    (void)Serial.println(WiFi.localIP());
+    Serial.println();
+    Serial.println("Connected!");
+    Serial.print("IP address: ");
+    Serial.println(WiFi.localIP());
 
     g_server.begin();
-    (void)Serial.println("TCP echo server listening on port 7");
+    Serial.println("TCP echo server listening on port 7");
 
     beginMqttClient();
 }
@@ -66,8 +66,8 @@ void loop()
         return;
     }
 
-    (void)Serial.println("Client connected");
-    (void)Serial.print("MSG from client: ");
+    Serial.println("Client connected");
+    Serial.print("MSG from client: ");
     while (client.connected())
     {
         while (client.available())
@@ -78,12 +78,12 @@ void loop()
                 break;
             }
 
-            (void)Serial.write(static_cast<uint8_t>(data));
-            (void)client.write(static_cast<uint8_t>(data));
+            Serial.write(static_cast<uint8_t>(data));
+            client.write(static_cast<uint8_t>(data));
         }
         delay(1);
     }
 
     client.stop();
-    (void)Serial.println("Client disconnected");
+    Serial.println("Client disconnected");
 }
