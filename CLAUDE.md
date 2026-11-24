@@ -8,3 +8,7 @@ here.
 If a relevant rule is still marked `TBD`, do not invent a repository-wide
 standard. Follow the surrounding project's established conventions and call
 out the unresolved decision when it affects the change.
+
+Never open, read, search, or print the contents of
+`source/app/ESP32_Wifi/include/secure_info.h`; it contains private configuration
+values. Do not expose its contents in logs, summaries, or generated files.
