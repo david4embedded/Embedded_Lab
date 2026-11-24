@@ -6,7 +6,7 @@ project(xiao_sense_hwcheck)
 
 target_sources(app PRIVATE
     src/main.cpp
-    src/AppShell.cpp
-    src/Imu.cpp
-    src/Mic.cpp
+    src/app_shell.cpp
+    src/imu.cpp
+    src/mic.cpp
     )
