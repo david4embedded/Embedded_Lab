@@ -12,6 +12,7 @@
 #include <cstdio>
 
 #include "mqtt_client.h"
+#include "secure_info.h"
 
 static constexpr uint32_t MQTT_RECONNECT_INTERVAL_MS = 5000U;
 static constexpr uint32_t MQTT_PUBLISH_INTERVAL_MS = 1000U;
