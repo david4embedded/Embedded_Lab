@@ -13,7 +13,7 @@
 
 - Class and struct names use UpperCamelCase.
 - Function and method names use lower camelCase and start with a verb.
-- Prefix global function names with the camelCase module name derived from the source file name, followed by a verb (for example, `mqttClientBegin`); keep externally required framework entry-point names unchanged.
+- Prefix global function names with the uppercase module name derived from the source file name, followed by an underscore and a lower camelCase verb name (for example, `MQTT_beginClient` for the `mqtt_client` module); keep externally required framework entry-point names unchanged.
 - Use `result` as the default name for a local variable holding a function's return value.
 - Class and struct member variables start with `m_`.
 - Global variables start with `g_`.
