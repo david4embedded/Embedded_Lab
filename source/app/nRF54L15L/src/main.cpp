@@ -1,97 +1,127 @@
+/**
+ * @file main.cpp
+ * @brief Runs the button, LED and UART demonstration.
+ * @date 2026-04-19
+ * @author Sungsu Kim
+ */
+
 /*
  * Copyright (c) 2016 Intel Corporation
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include "Led.hpp"
-#include "Button.hpp"
-#include "Serial.hpp"
+#include "button.hpp"
+#include "led.hpp"
+#include "serial.hpp"
 
-#include <zephyr/logging/log.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/kernel.h>
 
-#define SLEEP_TIME_MS  	(100)
+#include <cstdint>
+#include <span>
 
-// Device tree nodes
-static const struct gpio_dt_spec s_gpioLed 		= GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios);
-static const struct gpio_dt_spec s_gpioButton 	= GPIO_DT_SPEC_GET(DT_ALIAS(sw0), gpios);
-static const struct device *s_uart 				= DEVICE_DT_GET(DT_NODELABEL(uart20));	
+constexpr int32_t SLEEP_TIME_MS = 100;
 
-// UART configuration
-const struct uart_config uart_cfg = 
+static const struct gpio_dt_spec s_ledGpio = GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios);
+static const struct gpio_dt_spec s_buttonGpio = GPIO_DT_SPEC_GET(DT_ALIAS(sw0), gpios);
+static const struct device* s_uart = DEVICE_DT_GET(DT_NODELABEL(uart20));
+
+constexpr struct uart_config UART_CONFIG =
 {
-	.baudrate = 115200,	// Todo: This doesn't work; the one in the overlay does. Why?
+	.baudrate = 115200,	// TODO: The overlay currently determines the effective baud rate.
 	.parity = UART_CFG_PARITY_NONE,
 	.stop_bits = UART_CFG_STOP_BITS_1,
 	.data_bits = UART_CFG_DATA_BITS_8,
 	.flow_ctrl = UART_CFG_FLOW_CTRL_NONE
 };
 
-static void uartCallback(const struct device *dev, struct uart_event *evt, void *user_data);
+static void MAIN_uartCallback(const struct device* dev, struct uart_event* event, void* userData);
 
-static uint8_t s_rxBuffer[10] = {0};
-static std::span<uint8_t> s_rxBufferSpan(s_rxBuffer, sizeof(s_rxBuffer));
-static Serial s_serial(uart_cfg, *s_uart, s_rxBufferSpan, uartCallback);
+static uint8_t s_rxBuffer[10] = {};
+static std::span<uint8_t> s_rxBufferSpan(s_rxBuffer);
+static Serial s_serial(UART_CONFIG, *s_uart, s_rxBufferSpan, MAIN_uartCallback);
 
+/**
+ * @brief Initializes the demo and repeatedly mirrors the button state to the LED.
+ * @retval 0 if the demonstration exits normally.
+ */
 int main(void)
 {
-	Led led1(s_gpioLed);
-	Button btn1(s_gpioButton);
+	Led led(s_ledGpio);
+	Button button(s_buttonGpio);
 
-	s_serial.Initialize();
-	s_serial.Send("Hello!\n\r");
+	auto result = s_serial.initialize();
+	if (result != 0)
+	{
+		printk("Failed to initialize UART: %d\n", result);
+	}
 
-	bool btn1State = btn1.IsPressed();
+	result = s_serial.send("Hello!\n\r");
+	if (result != 0)
+	{
+		printk("Failed to send UART greeting: %d\n", result);
+	}
 
-	for(;;)
-	{	
-		auto state = btn1.IsPressed();
-		if(state) 
+	bool buttonWasPressed = button.isPressed();
+
+	for (;;)
+	{
+		const auto buttonIsPressed = button.isPressed();
+		if (buttonIsPressed)
 		{
-			led1.TurnOn();
-		} 
+			led.turnOn();
+		}
 		else 
 		{
-			led1.TurnOff();
+			led.turnOff();
 		}
 
-		if(btn1State != state) 
+		if (buttonWasPressed != buttonIsPressed)
 		{
-			btn1State = state;
-			printk("Button changed! LED is %s.\n", state ? "ON" : "OFF");
+			buttonWasPressed = buttonIsPressed;
+			printk("Button changed! LED is %s.\n", buttonIsPressed ? "ON" : "OFF");
 		}
-	
+
 		k_msleep(SLEEP_TIME_MS);
 	}
+
 	return 0;
 }
 
-static void uartCallback(const struct device *dev, struct uart_event *evt, void *user_data)
+/**
+ * @brief Handles UART events and resumes reception after it is disabled.
+ * @retval None
+ */
+static void MAIN_uartCallback(const struct device* dev, struct uart_event* event, void* userData)
 {
-	switch (evt->type) 
-	{	
-	case UART_RX_RDY:
-		printk("\n");
-		for (size_t i = evt->data.rx.offset; i < evt->data.rx.offset + evt->data.rx.len; ++i) 
-		{
-			printk("%c", evt->data.rx.buf[i]);
-		}
-    	printk(" (echo)\n");
-		break;
+	ARG_UNUSED(dev);
+	ARG_UNUSED(userData);
 
-	case UART_RX_DISABLED:
-		s_serial.EnableRx();
-		break;
+	switch (event->type)
+	{
+		case UART_RX_RDY:
+			printk("\n");
+			for (size_t i = event->data.rx.offset; i < event->data.rx.offset + event->data.rx.len; ++i)
+			{
+				printk("%c", event->data.rx.buf[i]);
+			}
+			printk(" (echo)\n");
+			break;
 
-	// Intentional fallthrough
-	case UART_TX_DONE:
-	case UART_TX_ABORTED:
-	case UART_RX_BUF_REQUEST:
-	case UART_RX_BUF_RELEASED:
-	case UART_RX_STOPPED:
-	default:
-		break;
+		case UART_RX_DISABLED:
+			if (const auto result = s_serial.enableRx(); result != 0)
+			{
+				printk("Failed to re-enable UART RX: %d\n", result);
+			}
+			break;
+
+		case UART_TX_DONE:
+		case UART_TX_ABORTED:
+		case UART_RX_BUF_REQUEST:
+		case UART_RX_BUF_RELEASED:
+		case UART_RX_STOPPED:
+		default:
+			break;
 	}
 }
