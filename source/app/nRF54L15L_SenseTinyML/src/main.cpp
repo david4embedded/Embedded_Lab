@@ -1,18 +1,16 @@
-/*
- * Hardware check application for Seeed Studio XIAO nRF54L15 Sense
- *
- * Checks the on-board LED, user button, 6-axis IMU and PDM microphone and prints
- * a PASS/FAIL summary at boot. Live readings are available through the shell
- * ("imu" and "mic" commands, see AppShell.hpp).
- *
+/**
+ * @file main.cpp
+ * @brief Hardware check application entry point for Seeed Studio XIAO nRF54L15 Sense.
+ * @date 2026-11-16
+ * @author Sungsu Kim
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include "AppShell.hpp"
-#include "Button.hpp"
-#include "Imu.hpp"
-#include "Led.hpp"
-#include "Mic.hpp"
+#include "app_shell.hpp"
+#include "button.hpp"
+#include "imu.hpp"
+#include "led.hpp"
+#include "mic.hpp"
 
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/hwinfo.h>
@@ -20,134 +18,154 @@
 #include <zephyr/kernel.h>
 #include <zephyr/sys/printk.h>
 
-#define TICK_MS				(100)	// Main loop period
-#define LED_TOGGLE_TICKS	(5)		// Heartbeat: toggle every 500 ms
+#include <cstdint>
 
-// Device tree nodes
-static const struct gpio_dt_spec s_gpioLed		= GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios);
-static const struct gpio_dt_spec s_gpioButton	= GPIO_DT_SPEC_GET(DT_ALIAS(sw0), gpios);
-static const struct i2c_dt_spec s_i2cImu		= I2C_DT_SPEC_GET(DT_ALIAS(imu0));
-static const struct device *s_dmic				= DEVICE_DT_GET(DT_NODELABEL(dmic_dev));
+constexpr uint32_t TICK_MS = 100;
+constexpr uint32_t LED_TOGGLE_TICKS = 5;
 
-// Shared with the shell commands, so they live for the whole run time
+static const struct gpio_dt_spec s_gpioLed = GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios);
+static const struct gpio_dt_spec s_gpioButton = GPIO_DT_SPEC_GET(DT_ALIAS(sw0), gpios);
+static const struct i2c_dt_spec s_i2cImu = I2C_DT_SPEC_GET(DT_ALIAS(imu0));
+static const struct device* s_dmic = DEVICE_DT_GET(DT_NODELABEL(dmic_dev));
+
 static Led s_led(s_gpioLed);
 static Button s_button(s_gpioButton);
 static Imu s_imu(s_i2cImu);
 static Mic s_mic(*s_dmic);
 
-static const char* ResultString(bool pass)
+static const char* MAIN_resultString(bool pass);
+static void MAIN_printChipInfo();
+static bool MAIN_checkLed(Led& led);
+static int MAIN_checkMic(Mic& mic, Mic::Level& level);
+
+/**
+ * @brief Hardware check application entry point.
+ * @retval 0 if the application exits normally
+ */
+int main(void)
 {
-	return pass ? "PASS" : "FAIL";
-}
+    printk("\n==============================================\n");
+    printk(" XIAO nRF54L15 Sense - HW check (%s)\n", CONFIG_BOARD_TARGET);
+    printk("==============================================\n");
 
-static void PrintChipInfo()
-{
-	uint8_t id[16] = {0};
-	auto len = hwinfo_get_device_id(id, sizeof(id));
+    MAIN_printChipInfo();
 
-	printk("Device ID   : ");
-	if (len > 0)
-	{
-		for (ssize_t i = 0; i < len; ++i)
-		{
-			printk("%02X", id[i]);
-		}
-		printk("\n");
-	}
-	else
-	{
-		printk("n/a (%d)\n", static_cast<int>(len));
-	}
+    const bool ledOk = MAIN_checkLed(s_led);
+    const bool buttonOk = s_button.isConfigured();
 
-	uint32_t cause = 0;
-	if (hwinfo_get_reset_cause(&cause) == 0)
-	{
-		printk("Reset cause : 0x%08X\n", cause);
-		hwinfo_clear_reset_cause();
-	}
-}
+    const auto imuRet = s_imu.initialize();
+    const bool imuOk = (imuRet == 0);
 
-static bool CheckLed(Led& led)
-{
-	if (!led.IsConfigured())
-	{
-		return false;
-	}
+    Mic::Level micLevel = {};
+    const auto micRet = MAIN_checkMic(s_mic, micLevel);
+    const bool micOk = (micRet == 0);
 
-	// Blink 3 times so the LED can be checked visually
-	for (int i = 0; i < 3; ++i)
-	{
-		led.TurnOn();
-		k_msleep(150);
-		led.TurnOff();
-		k_msleep(150);
-	}
-	return true;
+    printk("\n---------------- Self test -------------------\n");
+    printk("[%s] LED    (P2.00)\n", MAIN_resultString(ledOk));
+    printk("[%s] Button (P0.00)\n", MAIN_resultString(buttonOk));
+    printk("[%s] IMU    WHO_AM_I=0x%02X (%s), ret=%d\n",
+        MAIN_resultString(imuOk), s_imu.getWhoAmI(), s_imu.getChipName(), imuRet);
+    printk("[%s] Mic    PDM 16 kHz mono, ret=%d, peak=%d%s\n",
+        MAIN_resultString(micOk), micRet, micLevel.m_peak, micLevel.m_flat ? " (FLAT)" : "");
+    printk("----------------------------------------------\n");
+    printk("Shell commands: imu info | imu read | imu stream <ms> | imu classify | mic monitor [ms]\n");
+    printk("Press ESC to stop streaming.\n\n");
+
+    AppShell::Initialize(s_imu, imuOk, s_mic, micOk);
+
+    for (uint32_t tick = 1; ; ++tick)
+    {
+        if (s_button.isPressed())
+        {
+            s_led.turnOn();
+        }
+        else if ((tick % LED_TOGGLE_TICKS) == 0)
+        {
+            s_led.toggle();
+        }
+
+        k_msleep(TICK_MS);
+    }
+
+    return 0;
 }
 
 /**
- * @brief Capture one block to check that the mic delivers data
+ * @brief Convert a test result to PASS or FAIL text.
+ * @retval PASS for a passing result, FAIL otherwise
  */
-static int CheckMic(Mic& mic, Mic::Level& level)
+static const char* MAIN_resultString(bool pass)
 {
-	auto ret = mic.Initialize();
-	if (ret == 0)
-	{
-		ret = mic.Start();
-	}
-	if (ret == 0)
-	{
-		ret = mic.Read(level);
-		mic.Stop();
-	}
-	return ret;
+    return pass ? "PASS" : "FAIL";
 }
 
-int main(void)
+/**
+ * @brief Print the device identity and reset cause.
+ * @retval None
+ */
+static void MAIN_printChipInfo()
 {
-	printk("\n==============================================\n");
-	printk(" XIAO nRF54L15 Sense - HW check (%s)\n", CONFIG_BOARD_TARGET);
-	printk("==============================================\n");
+    uint8_t id[16] = {0};
+    const auto len = hwinfo_get_device_id(id, sizeof(id));
 
-	PrintChipInfo();
+    printk("Device ID   : ");
+    if (len > 0)
+    {
+        for (ssize_t i = 0; i < len; ++i)
+        {
+            printk("%02X", id[i]);
+        }
+        printk("\n");
+    }
+    else
+    {
+        printk("n/a (%d)\n", static_cast<int>(len));
+    }
 
-	const bool ledOk = CheckLed(s_led);
-	const bool buttonOk = s_button.IsConfigured();
+    uint32_t cause = 0;
+    if (hwinfo_get_reset_cause(&cause) == 0)
+    {
+        printk("Reset cause : 0x%08X\n", cause);
+        hwinfo_clear_reset_cause();
+    }
+}
 
-	const auto imuRet = s_imu.Initialize();
-	const bool imuOk = (imuRet == 0);
+/**
+ * @brief Check and visually exercise the LED.
+ * @retval true when configured, false otherwise
+ */
+static bool MAIN_checkLed(Led& led)
+{
+    if (!led.isConfigured())
+    {
+        return false;
+    }
 
-	Mic::Level micLevel = {};
-	const auto micRet = CheckMic(s_mic, micLevel);
-	const bool micOk = (micRet == 0);
+    for (int i = 0; i < 3; ++i)
+    {
+        led.turnOn();
+        k_msleep(150);
+        led.turnOff();
+        k_msleep(150);
+    }
+    return true;
+}
 
-	printk("\n---------------- Self test -------------------\n");
-	printk("[%s] LED    (P2.00)\n", ResultString(ledOk));
-	printk("[%s] Button (P0.00)\n", ResultString(buttonOk));
-	printk("[%s] IMU    WHO_AM_I=0x%02X (%s), ret=%d\n",
-		ResultString(imuOk), s_imu.WhoAmI(), s_imu.ChipName(), imuRet);
-	printk("[%s] Mic    PDM 16 kHz mono, ret=%d, peak=%d%s\n",
-		ResultString(micOk), micRet, micLevel.peak, micLevel.flat ? " (FLAT)" : "");
-	printk("----------------------------------------------\n");
-	printk("Shell commands: imu info | imu read | imu stream <ms> | imu classify | mic monitor [ms]\n");
-	printk("Press ESC to stop streaming.\n\n");
-
-	AppShell::Initialize(s_imu, imuOk, s_mic, micOk);
-
-	for (uint32_t tick = 1; ; ++tick)
-	{
-		// LED stays on while the button is pressed, heartbeat otherwise
-		if (s_button.IsPressed())
-		{
-			s_led.TurnOn();
-		}
-		else if ((tick % LED_TOGGLE_TICKS) == 0)
-		{
-			s_led.Toggle();
-		}
-
-		k_msleep(TICK_MS);
-	}
-
-	return 0;
+/**
+ * @brief Capture one block to check the microphone.
+ * @retval 0 on success, negative errno otherwise
+ */
+static int MAIN_checkMic(Mic& mic, Mic::Level& level)
+{
+    auto ret = mic.initialize();
+    if (ret == 0)
+    {
+        ret = mic.start();
+    }
+    if (ret == 0)
+    {
+        ret = mic.read(level);
+        mic.stop();
+    }
+    return ret;
 }

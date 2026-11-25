@@ -1,10 +1,16 @@
+/**
+ * @file live_guards.hpp
+ * @brief RAII guards for interrupt handling and live IMU stream shutdown.
+ * @date 2026-11-14
+ * @author Sungsu Kim
+ */
+
 #pragma once
 
 #include "serial_port.hpp"
 
 namespace platform
 {
-
 class InterruptHandlerGuard
 {
 public:
@@ -14,11 +20,11 @@ public:
     InterruptHandlerGuard(const InterruptHandlerGuard &) = delete;
     InterruptHandlerGuard &operator=(const InterruptHandlerGuard &) = delete;
 
-    bool is_stop_requested() const;
+    bool isStopRequested() const;
 
 private:
     using SignalHandler = void (*)(int);
-    SignalHandler previous_handler_;
+    SignalHandler m_previous_handler{};
 };
 
 class ImuStreamStopGuard
@@ -30,8 +36,8 @@ public:
     void stop();
 
 private:
-    SerialPort &serial_port_;
-    bool active_;
+    SerialPort &m_serial_port;
+    bool m_active{};
 };
 
 } // namespace platform

@@ -6,7 +6,7 @@ a live nRF serial stream on Windows.
 ## Requirements
 
 - CMake 3.20 or newer
-- MinGW GCC/G++ and `mingw32-make` available on `PATH`
+- MinGW GCC/G++ with C++23 support and `mingw32-make` available on `PATH`
 
 Check that the commands are available in PowerShell:
 

@@ -1,3 +1,10 @@
+/**
+ * @file serial_port.cpp
+ * @brief Implements Windows serial-port configuration and line I/O.
+ * @date 2026-11-12
+ * @author Sungsu Kim
+ */
+
 #include "serial_port.hpp"
 
 #include <algorithm>
@@ -15,88 +22,72 @@
 
 namespace platform
 {
-namespace
-{
+constexpr std::size_t MAX_LINE_LENGTH = 1024;
+constexpr std::size_t READ_BUFFER_SIZE = 256;
+constexpr char DEVICE_PREFIX[] = "\\\\.\\";
 
-constexpr std::size_t kMaxLineLength = 1024;
-constexpr std::size_t kReadBufferSize = 256;
-
-std::string normalize_port_name(const std::string &port_name)
-{
-    const std::string device_prefix = "\\\\.\\";
-    if (port_name.compare(0, device_prefix.size(), device_prefix) == 0)
-    {
-        return port_name;
-    }
-
-    std::string upper_name = port_name;
-    std::transform(upper_name.begin(), upper_name.end(), upper_name.begin(),
-        [](unsigned char character)
-        {
-            return static_cast<char>(std::toupper(character));
-        });
-
-    if (upper_name.size() <= 3 || upper_name.compare(0, 3, "COM") != 0 ||
-        !std::all_of(upper_name.begin() + 3, upper_name.end(),
-            [](unsigned char character)
-            {
-                return std::isdigit(character) != 0;
-            }))
-    {
-        throw std::invalid_argument("Serial port must be named COM followed by a number");
-    }
-
-    return device_prefix + upper_name;
-}
-
-std::runtime_error make_windows_error(const std::string &operation, DWORD error_code)
-{
-    return std::runtime_error(
-        operation + " failed with Windows error " + std::to_string(error_code));
-}
-
-HANDLE native_handle(void *handle)
-{
-    return static_cast<HANDLE>(handle);
-}
+static std::string NormalizePortName(const std::string &port_name);
+static std::runtime_error MakeWindowsError(
+    const std::string &operation,
+    const DWORD error_code);
+static HANDLE GetNativeHandle(void *handle);
 
 class ScopedHandle
 {
 public:
-    explicit ScopedHandle(HANDLE handle) : handle_(handle)
+    /**
+     * @brief Owns a Windows handle until it is released or destroyed.
+     * @retval None
+     */
+    explicit ScopedHandle(const HANDLE handle)
+        : m_handle(handle)
     {
     }
 
+    /**
+     * @brief Closes the owned Windows handle when it remains valid.
+     * @retval None
+     */
     ~ScopedHandle()
     {
-        if (handle_ != INVALID_HANDLE_VALUE)
+        if (m_handle != INVALID_HANDLE_VALUE)
         {
-            CloseHandle(handle_);
+            CloseHandle(m_handle);
         }
     }
 
+    /**
+     * @brief Returns the currently owned Windows handle.
+     * @retval handle The owned Windows handle
+     */
     HANDLE get() const
     {
-        return handle_;
+        return m_handle;
     }
 
+    /**
+     * @brief Transfers ownership of the Windows handle to the caller.
+     * @retval released_handle The previously owned Windows handle
+     */
     HANDLE release()
     {
-        HANDLE handle = handle_;
-        handle_ = INVALID_HANDLE_VALUE;
-        return handle;
+        HANDLE result = m_handle;
+        m_handle = INVALID_HANDLE_VALUE;
+        return result;
     }
 
 private:
-    HANDLE handle_;
+    HANDLE m_handle{};
 };
 
-} // namespace
-
-SerialPort::SerialPort(const std::string &port_name, std::uint32_t baud_rate)
-    : handle_(nullptr)
+/**
+ * @brief Opens and configures a serial port.
+ * @retval None
+ */
+SerialPort::SerialPort(const std::string &port_name, const std::uint32_t baud_rate)
+    : m_handle(nullptr)
 {
-    const std::string device_name = normalize_port_name(port_name);
+    const std::string device_name = NormalizePortName(port_name);
     ScopedHandle handle(CreateFileA(
         device_name.c_str(),
         GENERIC_READ | GENERIC_WRITE,
@@ -107,19 +98,19 @@ SerialPort::SerialPort(const std::string &port_name, std::uint32_t baud_rate)
         nullptr));
     if (handle.get() == INVALID_HANDLE_VALUE)
     {
-        throw make_windows_error("Opening " + device_name, GetLastError());
+        throw MakeWindowsError("Opening " + device_name, GetLastError());
     }
 
     if (!SetupComm(handle.get(), 4096, 4096))
     {
-        throw make_windows_error("Configuring serial buffers", GetLastError());
+        throw MakeWindowsError("Configuring serial buffers", GetLastError());
     }
 
-    DCB settings{};
+    DCB settings = DCB();
     settings.DCBlength = sizeof(settings);
     if (!GetCommState(handle.get(), &settings))
     {
-        throw make_windows_error("Reading serial settings", GetLastError());
+        throw MakeWindowsError("Reading serial settings", GetLastError());
     }
 
     settings.BaudRate = baud_rate;
@@ -137,34 +128,42 @@ SerialPort::SerialPort(const std::string &port_name, std::uint32_t baud_rate)
     settings.fRtsControl = RTS_CONTROL_DISABLE;
     if (!SetCommState(handle.get(), &settings))
     {
-        throw make_windows_error("Setting serial parameters", GetLastError());
+        throw MakeWindowsError("Setting serial parameters", GetLastError());
     }
 
-    COMMTIMEOUTS timeouts{};
+    COMMTIMEOUTS timeouts = COMMTIMEOUTS();
     timeouts.ReadIntervalTimeout = MAXDWORD;
     if (!SetCommTimeouts(handle.get(), &timeouts))
     {
-        throw make_windows_error("Setting serial timeouts", GetLastError());
+        throw MakeWindowsError("Setting serial timeouts", GetLastError());
     }
 
     if (!PurgeComm(handle.get(), PURGE_RXCLEAR | PURGE_TXCLEAR))
     {
-        throw make_windows_error("Clearing serial buffers", GetLastError());
+        throw MakeWindowsError("Clearing serial buffers", GetLastError());
     }
-    handle_ = handle.release();
+    m_handle = handle.release();
 }
 
+/**
+ * @brief Closes the serial port when it is open.
+ * @retval None
+ */
 SerialPort::~SerialPort()
 {
-    if (handle_ != nullptr)
+    if (m_handle != nullptr)
     {
-        CloseHandle(native_handle(handle_));
+        CloseHandle(GetNativeHandle(m_handle));
     }
 }
 
-void SerialPort::write_all(const std::string &data)
+/**
+ * @brief Writes all bytes in the provided string to the serial port.
+ * @retval None
+ */
+void SerialPort::writeAll(const std::string &data)
 {
-    HANDLE handle = native_handle(handle_);
+    HANDLE handle = GetNativeHandle(m_handle);
     std::size_t offset = 0;
     while (offset < data.size())
     {
@@ -173,7 +172,7 @@ void SerialPort::write_all(const std::string &data)
         DWORD written = 0;
         if (!WriteFile(handle, data.data() + offset, requested, &written, nullptr))
         {
-            throw make_windows_error("Writing to serial port", GetLastError());
+            throw MakeWindowsError("Writing to serial port", GetLastError());
         }
         if (written == 0)
         {
@@ -183,23 +182,28 @@ void SerialPort::write_all(const std::string &data)
     }
 }
 
-bool SerialPort::read_line(std::string &line, unsigned int timeout_ms)
+/**
+ * @brief Reads one newline-terminated serial input line before the timeout.
+ * @retval true when a line is read
+ * @retval false when the timeout expires before a line is read
+ */
+bool SerialPort::readLine(std::string &line, const std::uint32_t timeout_ms)
 {
     const auto deadline = std::chrono::steady_clock::now()
         + std::chrono::milliseconds(timeout_ms);
 
     for (;;)
     {
-        const std::size_t newline = pending_data_.find('\n');
+        const std::size_t newline = m_pending_data.find('\n');
         if (newline != std::string::npos)
         {
-            if (newline > kMaxLineLength)
+            if (newline > MAX_LINE_LENGTH)
             {
-                pending_data_.erase(0, newline + 1);
+                m_pending_data.erase(0, newline + 1);
                 throw std::runtime_error("Serial input line exceeded 1024 bytes");
             }
-            line.assign(pending_data_, 0, newline);
-            pending_data_.erase(0, newline + 1);
+            line.assign(m_pending_data, 0, newline);
+            m_pending_data.erase(0, newline + 1);
             if (!line.empty() && line.back() == '\r')
             {
                 line.pop_back();
@@ -207,26 +211,26 @@ bool SerialPort::read_line(std::string &line, unsigned int timeout_ms)
             return true;
         }
 
-        if (pending_data_.size() > kMaxLineLength)
+        if (m_pending_data.size() > MAX_LINE_LENGTH)
         {
-            pending_data_.clear();
+            m_pending_data.clear();
             throw std::runtime_error("Serial input line exceeded 1024 bytes");
         }
 
-        char buffer[kReadBufferSize];
+        char buffer[READ_BUFFER_SIZE];
         DWORD bytes_read = 0;
         if (!ReadFile(
-                native_handle(handle_),
+                GetNativeHandle(m_handle),
                 buffer,
                 static_cast<DWORD>(sizeof(buffer)),
                 &bytes_read,
                 nullptr))
         {
-            throw make_windows_error("Reading from serial port", GetLastError());
+            throw MakeWindowsError("Reading from serial port", GetLastError());
         }
         if (bytes_read > 0)
         {
-            pending_data_.append(buffer, bytes_read);
+            m_pending_data.append(buffer, bytes_read);
             continue;
         }
 
@@ -236,6 +240,58 @@ bool SerialPort::read_line(std::string &line, unsigned int timeout_ms)
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
+}
+
+/**
+ * @brief Normalizes a COM port name to its Windows device path.
+ * @retval normalized_path The normalized Windows serial device path
+ */
+static std::string NormalizePortName(const std::string &port_name)
+{
+    if (port_name.compare(0, sizeof(DEVICE_PREFIX) - 1, DEVICE_PREFIX) == 0)
+    {
+        return port_name;
+    }
+
+    std::string upper_name = port_name;
+    std::transform(upper_name.begin(), upper_name.end(), upper_name.begin(),
+        [](const unsigned char character) -> char
+        {
+            return static_cast<char>(std::toupper(character));
+        });
+
+    if (upper_name.size() <= 3 || upper_name.compare(0, 3, "COM") != 0 ||
+        !std::all_of(upper_name.begin() + 3, upper_name.end(),
+            [](const unsigned char character) -> bool
+            {
+                return std::isdigit(character) != 0;
+            }))
+    {
+        throw std::invalid_argument("Serial port must be named COM followed by a number");
+    }
+
+    return std::string(DEVICE_PREFIX) + upper_name;
+}
+
+/**
+ * @brief Creates a runtime error containing the Windows error code.
+ * @retval formatted_error The formatted Windows operation error
+ */
+static std::runtime_error MakeWindowsError(
+    const std::string &operation,
+    const DWORD error_code)
+{
+    return std::runtime_error(
+        operation + " failed with Windows error " + std::to_string(error_code));
+}
+
+/**
+ * @brief Converts the stored opaque handle to a Windows handle.
+ * @retval native_handle The native Windows handle
+ */
+static HANDLE GetNativeHandle(void *const handle)
+{
+    return static_cast<HANDLE>(handle);
 }
 
 } // namespace platform

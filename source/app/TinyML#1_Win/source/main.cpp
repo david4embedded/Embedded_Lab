@@ -1,3 +1,10 @@
+/**
+ * @file main.cpp
+ * @brief Runs gesture classification from CSV files or a live IMU serial stream.
+ * @date 2026-11-12
+ * @author Sungsu Kim
+ */
+
 #include "edge-impulse-sdk/classifier/ei_run_classifier.h"
 #include "live_guards.hpp"
 #include "serial_port.hpp"
@@ -7,6 +14,7 @@
 #include <cerrno>
 #include <cmath>
 #include <cstdlib>
+#include <cstddef>
 #include <cstdint>
 #include <deque>
 #include <fstream>
@@ -22,18 +30,32 @@
 using SampleWindow = std::array<float, EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE>;
 using AccelerationSample = std::array<float, EI_CLASSIFIER_RAW_SAMPLES_PER_FRAME>;
 
-static std::string trim(const std::string &value);
-static std::vector<std::string> split_csv_row(const std::string &line);
-static bool parse_number(const std::string &text, float &value);
-static bool parse_imu_stream_line(const std::string &line, AccelerationSample &sample);
-static size_t find_column(const std::vector<std::string> &header, const std::string &name);
-static bool read_csv(const std::string &path, std::vector<std::array<float, 3>> &samples);
-static std::string display_label(const char *model_label);
-static bool classify_window(const SampleWindow &window, size_t window_number);
-static int run_live(const std::string &port_name, std::uint32_t baud_rate);
-static bool parse_baud_rate(const char *text, std::uint32_t &baud_rate);
-static void print_usage();
+static std::string MAIN_trim(const std::string &value);
+static std::vector<std::string> MAIN_splitCsvRow(const std::string &line);
+static bool MAIN_parseNumber(const std::string &text, float &value);
+static bool MAIN_parseImuStreamLine(const std::string &line, AccelerationSample &sample);
+static std::size_t MAIN_findColumn(
+    const std::vector<std::string> &header,
+    const std::string &name);
+static bool MAIN_readCsv(
+    const std::string &path,
+    std::vector<std::array<float, 3>> &samples);
+static std::string MAIN_displayLabel(const char *model_label);
+static bool MAIN_classifyWindow(
+    const SampleWindow &window,
+    const std::size_t window_number);
+static int MAIN_runLive(
+    const std::string &port_name,
+    const std::uint32_t baud_rate);
+static bool MAIN_parseBaudRate(const char *text, std::uint32_t &baud_rate);
+static void MAIN_printUsage();
 
+/**
+ * @brief Runs CSV or live-stream gesture classification from command-line arguments.
+ * @retval 0 when classification completes successfully
+ * @retval 1 when input or inference fails
+ * @retval 2 when command-line arguments are invalid
+ */
 int main(int argc, char **argv)
 {
     if (argc >= 2 && std::string(argv[1]) == "--live")
@@ -41,19 +63,19 @@ int main(int argc, char **argv)
         std::uint32_t baud_rate = 115200;
         if (argc != 3 && argc != 5)
         {
-            print_usage();
+            MAIN_printUsage();
             return 2;
         }
         if (argc == 5 &&
             (std::string(argv[3]) != "--baud" ||
-             !parse_baud_rate(argv[4], baud_rate)))
+             !MAIN_parseBaudRate(argv[4], baud_rate)))
         {
             std::cerr << "ERROR: Baud rate must be a positive 32-bit integer.\n";
             return 2;
         }
         try
         {
-            return run_live(argv[2], baud_rate);
+            return MAIN_runLive(argv[2], baud_rate);
         }
         catch (const std::exception &error)
         {
@@ -64,22 +86,22 @@ int main(int argc, char **argv)
 
     if (argc != 2)
     {
-        print_usage();
+        MAIN_printUsage();
         return 2;
     }
 
     std::vector<std::array<float, 3>> samples;
-    if (!read_csv(argv[1], samples))
+    if (!MAIN_readCsv(argv[1], samples))
     {
         return 1;
     }
 
-    constexpr size_t samples_per_window = EI_CLASSIFIER_RAW_SAMPLE_COUNT;
-    const size_t complete_windows = samples.size() / samples_per_window;
-    const size_t trailing_samples = samples.size() % samples_per_window;
+    constexpr std::size_t SAMPLES_PER_WINDOW = EI_CLASSIFIER_RAW_SAMPLE_COUNT;
+    const std::size_t complete_windows = samples.size() / SAMPLES_PER_WINDOW;
+    const std::size_t trailing_samples = samples.size() % SAMPLES_PER_WINDOW;
     if (complete_windows == 0)
     {
-        std::cerr << "ERROR: Need at least " << samples_per_window
+        std::cerr << "ERROR: Need at least " << SAMPLES_PER_WINDOW
                   << " samples; CSV contains " << samples.size() << ".\n";
         return 1;
     }
@@ -97,18 +119,19 @@ int main(int argc, char **argv)
                   << " trailing sample(s) that do not fill a window.\n";
     }
 
-    for (size_t window_index = 0; window_index < complete_windows; ++window_index)
+    for (std::size_t window_index = 0; window_index < complete_windows; ++window_index)
     {
-        SampleWindow window{};
-        for (size_t sample_index = 0; sample_index < samples_per_window; ++sample_index)
+        SampleWindow window;
+        window.fill(0.0F);
+        for (std::size_t sample_index = 0; sample_index < SAMPLES_PER_WINDOW; ++sample_index)
         {
-            const auto &sample = samples[window_index * samples_per_window + sample_index];
-            for (size_t axis = 0; axis < sample.size(); ++axis)
+            const auto &sample = samples[window_index * SAMPLES_PER_WINDOW + sample_index];
+            for (std::size_t axis = 0; axis < sample.size(); ++axis)
             {
                 window[sample_index * sample.size() + axis] = sample[axis];
             }
         }
-        if (!classify_window(window, window_index + 1))
+        if (!MAIN_classifyWindow(window, window_index + 1))
         {
             return 1;
         }
@@ -117,25 +140,33 @@ int main(int argc, char **argv)
     return 0;
 }
 
-std::string trim(const std::string &value)
+/**
+ * @brief Removes leading and trailing whitespace from a string.
+ * @retval trimmed_string The trimmed string
+ */
+static std::string MAIN_trim(const std::string &value)
 {
-    const size_t first = value.find_first_not_of(" \t\r\n");
+    const std::size_t first = value.find_first_not_of(" \t\r\n");
     if (first == std::string::npos)
     {
-        return {};
+        return std::string();
     }
-    const size_t last = value.find_last_not_of(" \t\r\n");
+    const std::size_t last = value.find_last_not_of(" \t\r\n");
     return value.substr(first, last - first + 1);
 }
 
-std::vector<std::string> split_csv_row(const std::string &line)
+/**
+ * @brief Splits a CSV row into trimmed fields.
+ * @retval fields The fields found in the row
+ */
+static std::vector<std::string> MAIN_splitCsvRow(const std::string &line)
 {
     std::vector<std::string> fields;
     std::stringstream stream(line);
     std::string field;
     while (std::getline(stream, field, ','))
     {
-        fields.push_back(trim(field));
+        fields.push_back(MAIN_trim(field));
     }
     if (!line.empty() && line.back() == ',')
     {
@@ -144,7 +175,12 @@ std::vector<std::string> split_csv_row(const std::string &line)
     return fields;
 }
 
-bool parse_number(const std::string &text, float &value)
+/**
+ * @brief Parses a finite floating-point value from text.
+ * @retval true when a valid number is parsed
+ * @retval false when the text is invalid or out of range
+ */
+static bool MAIN_parseNumber(const std::string &text, float &value)
 {
     if (text.empty())
     {
@@ -153,36 +189,40 @@ bool parse_number(const std::string &text, float &value)
 
     char *end = nullptr;
     errno = 0;
-    const float parsed = std::strtof(text.c_str(), &end);
+    const float result = std::strtof(text.c_str(), &end);
     if (errno == ERANGE || end == text.c_str() || *end != '\0' ||
-        !std::isfinite(parsed))
+        !std::isfinite(result))
     {
         return false;
     }
-    value = parsed;
+    value = result;
     return true;
 }
 
-bool parse_imu_stream_line(const std::string &line, AccelerationSample &sample)
+/**
+ * @brief Parses the timestamp and three acceleration axes from a live IMU line.
+ * @retval true when a valid sample is parsed
+ * @retval false when the line does not contain a valid sample
+ */
+static bool MAIN_parseImuStreamLine(const std::string &line, AccelerationSample &sample)
 {
-    const size_t first_separator = line.find('|');
+    const std::size_t first_separator = line.find('|');
     if (first_separator == std::string::npos)
     {
         return false;
     }
-    const size_t second_separator = line.find('|', first_separator + 1);
+    const std::size_t second_separator = line.find('|', first_separator + 1);
     if (second_separator == std::string::npos)
     {
         return false;
     }
 
     std::istringstream timestamp_stream(line.substr(0, first_separator));
-    std::uint64_t timestamp = 0;
+    [[maybe_unused]] std::uint64_t timestamp = 0;
     if (!(timestamp_stream >> timestamp))
     {
         return false;
     }
-    (void)timestamp;
 
     std::istringstream acceleration_stream(
         line.substr(first_separator + 1, second_separator - first_separator - 1));
@@ -195,9 +235,15 @@ bool parse_imu_stream_line(const std::string &line, AccelerationSample &sample)
         std::isfinite(sample[2]);
 }
 
-size_t find_column(const std::vector<std::string> &header, const std::string &name)
+/**
+ * @brief Finds the index of a named column in a CSV header.
+ * @retval column_index The matching index or header size when absent
+ */
+static std::size_t MAIN_findColumn(
+    const std::vector<std::string> &header,
+    const std::string &name)
 {
-    for (size_t index = 0; index < header.size(); ++index)
+    for (std::size_t index = 0; index < header.size(); ++index)
     {
         if (header[index] == name)
         {
@@ -207,7 +253,14 @@ size_t find_column(const std::vector<std::string> &header, const std::string &na
     return header.size();
 }
 
-bool read_csv(const std::string &path, std::vector<std::array<float, 3>> &samples)
+/**
+ * @brief Reads acceleration samples from a CSV file.
+ * @retval true when the file is read successfully
+ * @retval false when the file or its acceleration data is invalid
+ */
+static bool MAIN_readCsv(
+    const std::string &path,
+    std::vector<std::array<float, 3>> &samples)
 {
     std::ifstream input(path);
     if (!input)
@@ -222,10 +275,10 @@ bool read_csv(const std::string &path, std::vector<std::array<float, 3>> &sample
         std::cerr << "ERROR: CSV file is empty.\n";
         return false;
     }
-    const auto header = split_csv_row(line);
-    const size_t ax_column = find_column(header, "ax");
-    const size_t ay_column = find_column(header, "ay");
-    const size_t az_column = find_column(header, "az");
+    const auto header = MAIN_splitCsvRow(line);
+    const std::size_t ax_column = MAIN_findColumn(header, "ax");
+    const std::size_t ay_column = MAIN_findColumn(header, "ay");
+    const std::size_t az_column = MAIN_findColumn(header, "az");
     if (ax_column == header.size() || ay_column == header.size() ||
         az_column == header.size())
     {
@@ -233,16 +286,16 @@ bool read_csv(const std::string &path, std::vector<std::array<float, 3>> &sample
         return false;
     }
 
-    size_t line_number = 1;
+    std::size_t line_number = 1;
     while (std::getline(input, line))
     {
         ++line_number;
-        if (trim(line).empty())
+        if (MAIN_trim(line).empty())
         {
             continue;
         }
-        const auto fields = split_csv_row(line);
-        const size_t max_column = std::max(ax_column, std::max(ay_column, az_column));
+        const auto fields = MAIN_splitCsvRow(line);
+        const std::size_t max_column = std::max(ax_column, std::max(ay_column, az_column));
         if (fields.size() <= max_column)
         {
             std::cerr << "ERROR: Missing acceleration value on CSV line "
@@ -250,10 +303,10 @@ bool read_csv(const std::string &path, std::vector<std::array<float, 3>> &sample
             return false;
         }
 
-        std::array<float, 3> sample{};
-        if (!parse_number(fields[ax_column], sample[0]) ||
-            !parse_number(fields[ay_column], sample[1]) ||
-            !parse_number(fields[az_column], sample[2]))
+        std::array<float, 3> sample;
+        if (!MAIN_parseNumber(fields[ax_column], sample[0]) ||
+            !MAIN_parseNumber(fields[ay_column], sample[1]) ||
+            !MAIN_parseNumber(fields[az_column], sample[2]))
         {
             std::cerr << "ERROR: Invalid acceleration value on CSV line "
                       << line_number << ".\n";
@@ -270,7 +323,11 @@ bool read_csv(const std::string &path, std::vector<std::array<float, 3>> &sample
     return true;
 }
 
-std::string display_label(const char *model_label)
+/**
+ * @brief Converts exported model labels to concise display labels.
+ * @retval display_label The concise or original model label
+ */
+static std::string MAIN_displayLabel(const char *model_label)
 {
     const std::string label(model_label);
     if (label.rfind("acc_gesture_idle_", 0) == 0)
@@ -288,57 +345,75 @@ std::string display_label(const char *model_label)
     return label;
 }
 
-bool classify_window(const SampleWindow &window, size_t window_number)
+/**
+ * @brief Runs inference on one sample window and prints the class scores.
+ * @retval true when inference succeeds
+ * @retval false when inference fails
+ */
+static bool MAIN_classifyWindow(
+    const SampleWindow &window,
+    const std::size_t window_number)
 {
-    signal_t signal{};
+    signal_t signal = signal_t();
     signal.total_length = window.size();
-    signal.get_data = [&window](size_t offset, size_t length, float *output)
+    signal.get_data = [&window](
+        const std::size_t offset,
+        const std::size_t length,
+        float *output) -> int
     {
         if (output == nullptr || offset > window.size() ||
             length > window.size() - offset)
         {
             return -1;
         }
-        for (size_t index = 0; index < length; ++index)
+        for (std::size_t index = 0; index < length; ++index)
         {
             output[index] = window[offset + index];
         }
         return 0;
     };
 
-    ei_impulse_result_t result{};
-    const EI_IMPULSE_ERROR error = run_classifier(&signal, &result, false);
-    if (error != EI_IMPULSE_OK)
+    ei_impulse_result_t classifier_result = ei_impulse_result_t();
+    const EI_IMPULSE_ERROR result = run_classifier(&signal, &classifier_result, false);
+    if (result != EI_IMPULSE_OK)
     {
         std::cerr << "ERROR: Inference failed for window " << window_number
-                  << " with error code " << static_cast<int>(error) << ".\n";
+                  << " with error code " << static_cast<int>(result) << ".\n";
         return false;
     }
 
     const auto best = std::max_element(
-        std::begin(result.classification),
-        std::end(result.classification),
+        std::begin(classifier_result.classification),
+        std::end(classifier_result.classification),
         [](const ei_impulse_result_classification_t &left,
-           const ei_impulse_result_classification_t &right)
+           const ei_impulse_result_classification_t &right) -> bool
         {
             return left.value < right.value;
         });
 
     std::cout << "window " << std::setw(4) << window_number
-              << "  prediction=" << display_label(best->label)
+              << "  prediction=" << MAIN_displayLabel(best->label)
               << "  confidence=" << std::fixed << std::setprecision(3)
               << best->value;
-    for (size_t index = 0; index < EI_CLASSIFIER_LABEL_COUNT; ++index)
+    for (std::size_t index = 0; index < EI_CLASSIFIER_LABEL_COUNT; ++index)
     {
-        std::cout << "  " << display_label(result.classification[index].label) << '='
+        std::cout << "  " << MAIN_displayLabel(
+            classifier_result.classification[index].label) << '='
                   << std::fixed << std::setprecision(3)
-                  << result.classification[index].value;
+                  << classifier_result.classification[index].value;
     }
     std::cout << '\n';
     return true;
 }
 
-int run_live(const std::string &port_name, std::uint32_t baud_rate)
+/**
+ * @brief Runs continuous gesture classification from a board serial stream.
+ * @retval 0 when the stream stops normally
+ * @retval 1 when inference fails
+ */
+static int MAIN_runLive(
+    const std::string &port_name,
+    const std::uint32_t baud_rate)
 {
     if (EI_CLASSIFIER_RAW_SAMPLES_PER_FRAME != 3)
     {
@@ -352,48 +427,49 @@ int run_live(const std::string &port_name, std::uint32_t baud_rate)
     std::cout << "Opened " << port_name << " at " << baud_rate << " baud.\n"
               << "Starting board IMU stream every " << EI_CLASSIFIER_INTERVAL_MS
               << " ms. Press Ctrl+C to stop.\n";
-    serial_port.write_all(
+    serial_port.writeAll(
         "imu stream " + std::to_string(EI_CLASSIFIER_INTERVAL_MS) + "\r");
 
     std::deque<AccelerationSample> recent_samples;
-    constexpr size_t samples_per_window = EI_CLASSIFIER_RAW_SAMPLE_COUNT;
-    constexpr size_t inference_step = EI_CLASSIFIER_SLICE_SIZE > 0
+    constexpr std::size_t SAMPLES_PER_WINDOW = EI_CLASSIFIER_RAW_SAMPLE_COUNT;
+    constexpr std::size_t INFERENCE_STEP = EI_CLASSIFIER_SLICE_SIZE > 0
         ? EI_CLASSIFIER_SLICE_SIZE
         : 1;
-    size_t samples_since_inference = 0;
-    size_t window_number = 0;
+    std::size_t samples_since_inference = 0;
+    std::size_t window_number = 0;
     std::string line;
 
-    while (!interrupt_guard.is_stop_requested())
+    while (!interrupt_guard.isStopRequested())
     {
-        if (!serial_port.read_line(line, 100))
+        if (!serial_port.readLine(line, 100))
         {
             continue;
         }
 
-        AccelerationSample sample{};
-        if (!parse_imu_stream_line(line, sample))
+        AccelerationSample sample;
+        if (!MAIN_parseImuStreamLine(line, sample))
         {
             continue;
         }
 
         recent_samples.push_back(sample);
-        if (recent_samples.size() > samples_per_window)
+        if (recent_samples.size() > SAMPLES_PER_WINDOW)
         {
             recent_samples.pop_front();
         }
-        if (recent_samples.size() < samples_per_window)
+        if (recent_samples.size() < SAMPLES_PER_WINDOW)
         {
             continue;
         }
 
-        if (window_number == 0 || ++samples_since_inference >= inference_step)
+        if (window_number == 0 || ++samples_since_inference >= INFERENCE_STEP)
         {
-            SampleWindow window{};
-            size_t sample_index = 0;
+            SampleWindow window;
+            window.fill(0.0F);
+            std::size_t sample_index = 0;
             for (const auto &window_sample : recent_samples)
             {
-                for (size_t axis = 0; axis < window_sample.size(); ++axis)
+                for (std::size_t axis = 0; axis < window_sample.size(); ++axis)
                 {
                     window[sample_index * window_sample.size() + axis]
                         = window_sample[axis];
@@ -402,7 +478,7 @@ int run_live(const std::string &port_name, std::uint32_t baud_rate)
             }
 
             ++window_number;
-            if (!classify_window(window, window_number))
+            if (!MAIN_classifyWindow(window, window_number))
             {
                 return 1;
             }
@@ -416,21 +492,30 @@ int run_live(const std::string &port_name, std::uint32_t baud_rate)
     return 0;
 }
 
-bool parse_baud_rate(const char *text, std::uint32_t &baud_rate)
+/**
+ * @brief Parses a positive 32-bit baud rate from command-line text.
+ * @retval true when a valid baud rate is parsed
+ * @retval false when the text is invalid or out of range
+ */
+static bool MAIN_parseBaudRate(const char *text, std::uint32_t &baud_rate)
 {
     char *end = nullptr;
     errno = 0;
-    const unsigned long parsed = std::strtoul(text, &end, 10);
-    if (errno == ERANGE || end == text || *end != '\0' || parsed == 0 ||
-        parsed > std::numeric_limits<std::uint32_t>::max())
+    const unsigned long result = std::strtoul(text, &end, 10);
+    if (errno == ERANGE || end == text || *end != '\0' || result == 0 ||
+        result > std::numeric_limits<std::uint32_t>::max())
     {
         return false;
     }
-    baud_rate = static_cast<std::uint32_t>(parsed);
+    baud_rate = static_cast<std::uint32_t>(result);
     return true;
 }
 
-void print_usage()
+/**
+ * @brief Prints the supported command-line forms.
+ * @retval None
+ */
+static void MAIN_printUsage()
 {
     std::cerr << "Usage:\n"
               << "  tinyml_gesture_test <imu.csv>\n"

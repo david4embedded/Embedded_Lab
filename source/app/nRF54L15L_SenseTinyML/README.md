@@ -3,7 +3,7 @@
   * Checks the on-board LED, user button, 6-axis IMU and PDM microphone and prints a PASS/FAIL summary at boot.
     Live IMU/mic readings are available through the shell (`imu`, `mic` commands).
   * The board DTS describes the IMU as `st,lsm6dso` (WHO_AM_I = 0x6C), but the Sense board carries an LSM6DS3TR-C (WHO_AM_I = 0x6A), so the Zephyr lsm6dso driver fails to initialize.
-    This app reads the IMU registers over I2C directly (`src/Imu.cpp`) instead of using the sensor driver.
+    This app reads the IMU registers over I2C directly (`src/imu.cpp`) instead of using the sensor driver.
 
 * What is checked
   | Item   | Pin / Bus              | Check                                                        |
@@ -82,7 +82,7 @@
   ----------------------------------------------
   ```
 
-* Shell commands (`src/AppShell.cpp`)
+* Shell commands (`src/app_shell.cpp`)
   | Command                  | Description                                                                        |
   |--------------------------|------------------------------------------------------------------------------------|
   | `imu info`               | WHO_AM_I and chip name                                                             |
@@ -117,7 +117,7 @@
     time[ms] |  peak |   rms | rms[dBFS] | level
          100 |    12 |     3 |     -80.8 | ####...............................
   ```
-  * If the mic level does not change while talking near the board, change `MIC_CHANNEL` in `src/Mic.cpp` to `PDM_CHAN_RIGHT`.
+  * If the mic level does not change while talking near the board, change `MIC_CHANNEL` in `src/mic.cpp` to `PDM_CHAN_RIGHT`.
 
 * Third-party licenses
   * Third-party license locations and attribution requirements are summarized in `NOTICE.md`.
