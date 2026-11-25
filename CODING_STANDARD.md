@@ -8,6 +8,7 @@
 
 - Use Allman brace style.
 - Indent `case` labels four spaces inside `switch`; do not add braces around case blocks.
+- Do not break lines solely to meet a line-length limit; keep expressions and calls intact unless wrapping improves readability.
 
 ## 3. Naming
 
