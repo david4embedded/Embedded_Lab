@@ -15,9 +15,5 @@
  */
 namespace AppShell
 {
-	/**
-	 * @brief Registers the objects used by the shell commands.
-	 * @retval None
-	 */
 	void Initialize(Imu& imu, const bool imuReady, Mic& mic, const bool micReady);
 }

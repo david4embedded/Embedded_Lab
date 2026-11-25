@@ -39,35 +39,15 @@ public:
 	{
 	}
 
-	/**
-	 * @brief Configures the PDM peripheral without starting capture.
-	 * @retval 0 on success; a negative errno value otherwise.
-	 */
 	int initialize();
 
-	/**
-	 * @brief Starts capture and discards the start-up transient.
-	 * @retval 0 on success; a negative errno value otherwise.
-	 */
 	int start();
 
-	/**
-	 * @brief Stops capture and releases queued blocks.
-	 * @retval None
-	 */
 	void stop();
 
-	/**
-	 * @brief Waits for the next block and computes its sound level.
-	 * @retval 0 on success; a negative errno value otherwise.
-	 */
 	int read(Level& level);
 
 private:
-	/**
-	 * @brief Releases blocks remaining in the driver queue.
-	 * @retval None
-	 */
 	void drain();
 
 	const struct device& m_dmic;	//!< PDM microphone device.

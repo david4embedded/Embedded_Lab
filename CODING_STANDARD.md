@@ -59,4 +59,4 @@
 - Use Doxygen-style comments.
 - Add a file header briefly describing the file's purpose, its original creation date, and author (`Sungsu Kim`).
 - Use `//!<` for comments on class members.
-- Document each function at its definition in the source file with a Doxygen block containing a concise `@brief` and `@retval`; use `@retval None` for `void` functions. Do not add function documentation to header declarations or document parameters.
+- Document each function at its definition with a Doxygen block containing a concise `@brief` and `@retval`; use `@retval None` for `void` functions. Put documentation for out-of-line functions in the source file, not on header declarations. Retain function documentation for inline functions defined in headers, since their definition is in the header. Do not document parameters.

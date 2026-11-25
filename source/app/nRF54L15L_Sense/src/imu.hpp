@@ -36,16 +36,8 @@ public:
 	{
 	}
 
-	/**
-	 * @brief Checks WHO_AM_I and configures the accelerometer and gyroscope.
-	 * @retval 0 on success; a negative errno value otherwise.
-	 */
 	int initialize();
 
-	/**
-	 * @brief Reads accel, gyro and temperature in one burst.
-	 * @retval 0 on success; a negative errno value otherwise.
-	 */
 	int read(Sample& sample);
 
 	/**
@@ -57,10 +49,6 @@ public:
 		return m_whoAmI;
 	}
 
-	/**
-	 * @brief Returns the detected IMU chip name.
-	 * @retval A null-terminated chip name.
-	 */
 	const char* getChipName() const;
 
 private:
