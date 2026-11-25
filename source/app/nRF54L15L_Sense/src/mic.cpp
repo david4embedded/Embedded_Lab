@@ -20,8 +20,7 @@
 static constexpr uint32_t SAMPLE_RATE = 16000;
 static constexpr uint8_t SAMPLE_BIT_WIDTH = 16;
 static constexpr uint32_t MILLISECONDS_PER_SECOND = 1000;
-static constexpr uint32_t BLOCK_SIZE =
-	sizeof(int16_t) * (SAMPLE_RATE * Mic::BLOCK_MS / MILLISECONDS_PER_SECOND);
+static constexpr uint32_t BLOCK_SIZE = sizeof(int16_t) * (SAMPLE_RATE * Mic::BLOCK_MS / MILLISECONDS_PER_SECOND);
 static constexpr uint32_t BLOCK_COUNT = 4;
 static constexpr int32_t READ_TIMEOUT_MS = 1000;
 static constexpr int32_t DISCARD_BLOCKS = 2;

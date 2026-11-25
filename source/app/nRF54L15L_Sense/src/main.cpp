@@ -66,10 +66,8 @@ int main(void)
 	printk("\n---------------- Self test -------------------\n");
 	printk("[%s] LED    (P2.00)\n", formatResultString(ledOk));
 	printk("[%s] Button (P0.00)\n", formatResultString(buttonOk));
-	printk("[%s] IMU    WHO_AM_I=0x%02X (%s), ret=%d\n",
-		formatResultString(imuOk), s_imu.getWhoAmI(), s_imu.getChipName(), imuResult);
-	printk("[%s] Mic    PDM 16 kHz mono, ret=%d, peak=%d%s\n",
-		formatResultString(micOk), micResult, micLevel.m_peak, micLevel.m_flat ? " (FLAT)" : "");
+	printk("[%s] IMU    WHO_AM_I=0x%02X (%s), ret=%d\n", formatResultString(imuOk), s_imu.getWhoAmI(), s_imu.getChipName(), imuResult);
+	printk("[%s] Mic    PDM 16 kHz mono, ret=%d, peak=%d%s\n", formatResultString(micOk), micResult, micLevel.m_peak, micLevel.m_flat ? " (FLAT)" : "");
 	printk("----------------------------------------------\n");
 	printk("Shell commands: imu info | imu read | imu stream <ms> | mic monitor [ms]\n");
 	printk("Press ESC to stop streaming.\n\n");
