@@ -7,5 +7,5 @@ project(spi_loopback)
 
 target_sources(app PRIVATE 
     src/main.cpp
-    src/Spi.cpp
+    src/spi.cpp
     )

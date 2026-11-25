@@ -1,132 +1,161 @@
+/**
+ * @file spi.cpp
+ * @brief Implements the Zephyr SPI driver wrapper.
+ * @date 2026-04-22
+ * @author Sungsu Kim
+ */
 
-#include "Spi.hpp"
+#include "spi.hpp"
 
+#include <cerrno>
+#include <cstdio>
+
+/**
+ * @brief Creates an SPI wrapper for the specified device.
+ * @retval None
+ */
+Spi::Spi(spi_dt_spec &spec, k_poll_event *asyncEvent)
+    : m_spec(spec), m_asyncEvent(asyncEvent)
+{
+}
+
+/**
+ * @brief Releases resources associated with the SPI device.
+ * @retval None
+ */
 Spi::~Spi()
 {
     spi_release_dt(&m_spec);
     m_spec.config.operation &= ~SPI_LOCK_ON;
 }
 
-int Spi::Initialize()
+/**
+ * @brief Checks and initializes the SPI device.
+ * @retval 0 on success; a negative error code otherwise.
+ */
+int Spi::initialize()
 {
-    if(m_csGpio)
+    if (!spi_is_ready_dt(&m_spec))
     {
-        auto ret = ConfigureCsChangeCallback();
-        if (ret)
-        {
-            printf("Failed to configure CS change callback, ret=%d\n", ret);
-            return ret;
-        }
+        return -ENODEV;
     }
 
     m_initialized = true;
     return 0;
 }
 
-int Spi::Tranceive(Buffer tx, Buffer rx)
+/**
+ * @brief Performs a blocking SPI transfer.
+ * @retval 0 on success; a negative error code otherwise.
+ */
+int Spi::transceive(const Buffer &tx, const Buffer &rx)
 {
-    if(!m_initialized)
+    if (!m_initialized)
     {
-        printf("SPI not initialized. Call Initialize() before tranceiving.\n");
-        return -1;
+        std::printf("SPI not initialized. Call initialize() before transceiving.\n");
+        return -EINVAL;
     }
 
-    int ret = pm_device_runtime_get(m_spec.bus);
-    if(ret)
+    auto result = pm_device_runtime_get(m_spec.bus);
+    if (result != 0)
     {
-        printf("Failed to get runtime PM for device %s\n", m_spec.bus->name);
-        return ret;
+        std::printf("Failed to get runtime PM for device %s\n", m_spec.bus->name);
+        return result;
     }
 
-    struct spi_buf spiBuffTx = ToSpiBuffer(tx);
-    struct spi_buf spiBuffRx = ToSpiBuffer(rx);
+    auto spiBufferTx = toSpiBuffer(tx);
+    auto spiBufferRx = toSpiBuffer(rx);
+    auto spiBuffersTx = populateSpiBufSingle(spiBufferTx);
+    auto spiBuffersRx = populateSpiBufSingle(spiBufferRx);
 
-    struct spi_buf_set spiBuffsTx = PopulateSpiBufSingle(spiBuffTx);
-    struct spi_buf_set spiBuffsRx = PopulateSpiBufSingle(spiBuffRx);
-
-    printf("Tranceive, Tx: %s\n", tx.data());
-
-    ret = spi_transceive_dt(&m_spec, &spiBuffsTx, &spiBuffsRx);
-    if (ret == -EINVAL || ret == -ENOTSUP) 
+    std::printf("Transceive, Tx: %.*s\n", static_cast<int>(tx.size()), reinterpret_cast<const char *>(tx.data()));
+    result = spi_transceive_dt(&m_spec, &spiBuffersTx, &spiBuffersRx);
+    if (result == -EINVAL || result == -ENOTSUP)
     {
-        printf("Spi config invalid for this controller\n");
+        std::printf("SPI config invalid for this controller\n");
+    }
+    else if (result == 0)
+    {
+        std::printf("Transceive, Rx: %.*s\n", static_cast<int>(rx.size()), reinterpret_cast<const char *>(rx.data()));
     }
 
-    printf("Tranceive, Rx: %s\n", rx.data());
+    const auto pmResult = pm_device_runtime_put(m_spec.bus);
+    if (result == 0 && pmResult != 0)
+    {
+        result = pmResult;
+    }
 
-    pm_device_runtime_put(m_spec.bus);
-
-    return ret;
+    return result;
 }
 
-int Spi::TranceiveAsync(Buffer tx, Buffer rx)
+/**
+ * @brief Starts an asynchronous SPI transfer.
+ * @retval 0 on success; a negative error code otherwise.
+ */
+int Spi::transceiveAsync(const Buffer &tx, const Buffer &rx)
 {
-    struct spi_buf spiBuffTx = ToSpiBuffer(tx);
-    struct spi_buf spiBuffRx = ToSpiBuffer(rx);
-
-    struct spi_buf_set spiBuffsTx = PopulateSpiBufSingle(spiBuffTx);
-    struct spi_buf_set spiBuffsRx = PopulateSpiBufSingle(spiBuffRx);
-
-    printf("TranceiveAsync, Tx: %s\n", tx.data());
-
-    int ret = spi_transceive_signal(m_spec.bus, &m_spec.config, &spiBuffsTx, &spiBuffsRx, m_asyncEvt->signal);
-    if (ret) 
+    if (!m_initialized || m_asyncEvent == nullptr || m_asyncEvent->signal == nullptr)
     {
-        printf("SPI transceive asyncfailed, code %d\n", ret);
+        return -EINVAL;
     }
 
-    return ret;
+    m_asyncSpiBufferTx = toSpiBuffer(tx);
+    m_asyncSpiBufferRx = toSpiBuffer(rx);
+    m_asyncSpiBuffersTx = populateSpiBufSingle(m_asyncSpiBufferTx);
+    m_asyncSpiBuffersRx = populateSpiBufSingle(m_asyncSpiBufferRx);
+
+    std::printf("TransceiveAsync, Tx: %.*s\n", static_cast<int>(tx.size()), reinterpret_cast<const char *>(tx.data()));
+
+    const auto result = spi_transceive_signal(
+        m_spec.bus, &m_spec.config, &m_asyncSpiBuffersTx, &m_asyncSpiBuffersRx, m_asyncEvent->signal);
+    if (result != 0)
+    {
+        std::printf("SPI async transceive failed, code %d\n", result);
+    }
+
+    return result;
 }
 
-int Spi::WaitComplete(uint32_t timeoutMs /* = 2000 */)
+/**
+ * @brief Waits for the asynchronous SPI transfer to complete.
+ * @retval 0 on success; a negative error code otherwise.
+ */
+int Spi::waitComplete(uint32_t timeoutMs)
 {
-    if(k_poll(m_asyncEvt, 1, K_MSEC(timeoutMs)))
+    if (m_asyncEvent == nullptr || m_asyncEvent->signal == nullptr)
     {
-        printf("Failed to wait for async transfer completion\n");
-        return -1;
+        return -EINVAL;
     }
-    return 0;
+
+    const auto result = k_poll(m_asyncEvent, 1U, K_MSEC(timeoutMs));
+    if (result != 0)
+    {
+        std::printf("Failed to wait for async transfer completion, code %d\n", result);
+    }
+
+    return result;
 }
 
-struct spi_buf_set Spi::PopulateSpiBufSingle(struct spi_buf& spi_buf)
+/**
+ * @brief Creates a one-buffer SPI buffer set.
+ * @retval The SPI buffer set.
+ */
+spi_buf_set Spi::populateSpiBufSingle(spi_buf &spiBuffer)
 {
-    struct spi_buf_set buf_set;
-    buf_set.buffers = &spi_buf;
-    buf_set.count = 1;
-
-    return buf_set;
+    spi_buf_set result;
+    result.buffers = &spiBuffer;
+    result.count = 1U;
+    return result;
 }
 
-struct spi_buf Spi::ToSpiBuffer(Buffer buf)
+/**
+ * @brief Converts a span to a Zephyr SPI buffer.
+ * @retval The SPI buffer.
+ */
+spi_buf Spi::toSpiBuffer(const Buffer &buffer)
 {
-    struct spi_buf spi_buf;
-    spi_buf.buf = buf.data();
-    spi_buf.len = buf.size();
-    return spi_buf;
-}
-
-int Spi::ConfigureCsChangeCallback()
-{
-    const struct gpio_dt_spec *gpio = m_csGpio;
-
-    if (!gpio_is_ready_dt(gpio)) 
-    {
-        return -ENODEV;
-    }
-
-    int ret = gpio_pin_configure_dt(gpio, GPIO_INPUT);
-    if (ret) 
-    {
-        return ret;
-    }
-
-    ret = gpio_pin_interrupt_configure_dt(gpio, GPIO_INT_EDGE_BOTH);
-    if (ret) 
-    {
-        return ret;
-    }
-
-    gpio_init_callback(&m_csCbData, nullptr, BIT(gpio->pin));
-
-    return gpio_add_callback(gpio->port, &m_csCbData);    
+    spi_buf result;
+    result.buf = buffer.data();
+    result.len = buffer.size();
+    return result;
 }

@@ -7,8 +7,4 @@
 
 #pragma once
 
-/**
- * @brief Configures and starts the MQTT client task.
- * @retval None
- */
 void MQTT_beginClient();
