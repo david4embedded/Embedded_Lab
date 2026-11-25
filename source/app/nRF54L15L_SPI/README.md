@@ -13,7 +13,7 @@
 		*** Booting nRF Connect SDK v3.2.4-4c3fc0d44534 ***
 		*** Using Zephyr OS v4.2.99-9673eec75908 ***
 		Sungsu's SPI Test
-		Tranceive, Tx: Hello
-		Tranceive, Rx: Hello
-		TranceiveAsync, Tx: Haloo
+		Transceive, Tx: Hello
+		Transceive, Rx: Hello
+		TransceiveAsync, Tx: Haloo
 		Main, Rx: Haloo

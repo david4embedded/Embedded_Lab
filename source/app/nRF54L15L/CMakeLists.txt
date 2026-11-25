@@ -6,5 +6,5 @@ project(blinky)
 
 target_sources(app PRIVATE 
     src/main.cpp
-    src/Serial.cpp
+    src/serial.cpp
     )

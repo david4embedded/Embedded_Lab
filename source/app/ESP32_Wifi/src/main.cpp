@@ -1,17 +1,33 @@
+/**
+ * @file main.cpp
+ * @brief ESP32 Wi-Fi TCP echo server and Arduino application entry points.
+ * @date 2026-10-28
+ * @author Sungsu Kim
+ */
+
 #include <Arduino.h>
 #include <WiFi.h>
+
 #include "mqtt_client.h"
 #include "secure_info.h"
 
-const int ledPin = 23;
-WiFiServer server(7);
+static constexpr uint8_t LED_PIN = 23U;
+static constexpr uint16_t TCP_SERVER_PORT = 7U;
+static constexpr uint32_t SERIAL_BAUD_RATE = 115200U;
+static constexpr unsigned long LED_TOGGLE_INTERVAL_MS = 1000UL;
 
+WiFiServer g_server(TCP_SERVER_PORT);
+
+/**
+ * @brief Initializes the serial port, Wi-Fi, TCP server, and MQTT client.
+ * @retval None
+ */
 void setup()
 {
-    Serial.begin(115200);
+    Serial.begin(SERIAL_BAUD_RATE);
 
-    pinMode(ledPin, OUTPUT);
-    digitalWrite(ledPin, LOW);
+    pinMode(LED_PIN, OUTPUT);
+    digitalWrite(LED_PIN, LOW);
 
     WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
     Serial.print("Connecting to Wi-Fi");
@@ -27,24 +43,27 @@ void setup()
     Serial.print("IP address: ");
     Serial.println(WiFi.localIP());
 
-    server.begin();
-    Serial.println("TCP echo server listening on port 7");
+    g_server.begin();
+    Serial.print("TCP echo server listening on port ");
+    Serial.println(TCP_SERVER_PORT);
 
-    mqttClientBegin();
+    MQTT_beginClient();
 }
 
+/**
+ * @brief Toggles the LED and echoes data from an available TCP client.
+ * @retval None
+ */
 void loop()
 {
-    static unsigned long lastToggleMs = 0;
-    const unsigned long toggleIntervalMs = 1000;
-
-    if (millis() - lastToggleMs >= toggleIntervalMs)
+    static auto s_lastToggleMs = 0UL;
+    if (millis() - s_lastToggleMs >= LED_TOGGLE_INTERVAL_MS)
     {
-        lastToggleMs = millis();
-        digitalWrite(ledPin, !digitalRead(ledPin));
+        s_lastToggleMs = millis();
+        digitalWrite(LED_PIN, !digitalRead(LED_PIN));
     }
 
-    WiFiClient client = server.available();
+    auto client = g_server.available();
     if (!client)
     {
         return;
@@ -56,9 +75,14 @@ void loop()
     {
         while (client.available())
         {
-            auto data = client.read();
+            const auto data = client.read();
+            if (data < 0)
+            {
+                break;
+            }
+
             Serial.write(static_cast<uint8_t>(data));
-            client.write(data);
+            client.write(static_cast<uint8_t>(data));
         }
         delay(1);
     }
