@@ -3,7 +3,7 @@ setlocal
 
 set "TOOLCHAIN=C:\ncs\toolchains\fd21892d0f"
 set "NCS_ROOT=C:\ncs\v3.2.4"
-set "BUILD_DIR=C:\Repository\Embedded_Lab\source\app\nRF54L15L_Sense\build"
+set "BUILD_DIR=%~dp0..\build"
 set "OPENOCD_BIN=C:\openocd\OpenOCD-20260302-0.12.0\bin"
 
 if not exist "%TOOLCHAIN%\opt\zephyr-sdk" (
