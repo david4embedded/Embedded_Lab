@@ -14,7 +14,7 @@
 
 - Class and struct names use UpperCamelCase.
 - Class methods use lower camelCase and start with a verb. Functions declared in a namespace use UpperCamelCase and start with a verb (for example, `AppShell::Initialize`).
-- Prefix global functions declared outside namespaces with the uppercase module name derived from the source file name, followed by an underscore and a lower camelCase verb name (for example, `MQTT_beginClient` for the `mqtt_client` module); keep externally required framework entry-point names unchanged.
+- Prefix non-static global functions declared outside namespaces with the uppercase module name derived from the source file name, followed by an underscore and a lower camelCase verb name (for example, `MQTT_beginClient` for the `mqtt_client` module). File-local `static` functions do not use a module prefix and use lower camelCase verb names. Keep externally required framework entry-point names unchanged.
 - Use `result` as the default name for a local variable holding a function's return value.
 - Class and struct member variables start with `m_`.
 - Global variables start with `g_`.

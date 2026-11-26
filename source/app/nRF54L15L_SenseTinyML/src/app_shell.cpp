@@ -71,7 +71,7 @@ static atomic_t s_stopRequested = ATOMIC_INIT(0);
  * @brief Wait until the deadline or until ESC is pressed
  * @retval true if ESC was pressed
  */
-static bool APP_SHELL_waitForStop(int64_t deadline)
+static bool waitForStop(int64_t deadline)
 {
 	const int64_t remaining = deadline - k_uptime_get();
 	const k_timeout_t timeout = (remaining > 0) ? K_MSEC(remaining) : K_NO_WAIT;
@@ -83,7 +83,7 @@ static bool APP_SHELL_waitForStop(int64_t deadline)
  * @brief Check whether a stop request has been raised.
  * @retval true if stop was requested, false otherwise
  */
-static bool APP_SHELL_isStopRequested()
+static bool isStopRequested()
 {
 	return k_sem_take(&s_stopSem, K_NO_WAIT) == 0;
 }
@@ -94,7 +94,7 @@ static bool APP_SHELL_isStopRequested()
  *          by '[' or 'O' in the same chunk is treated as an escape sequence and ignored
  * @retval true when a standalone ESC key is present, false otherwise
  */
-static bool APP_SHELL_hasEscKey(const uint8_t* data, size_t len)
+static bool hasEscKey(const uint8_t* data, size_t len)
 {
 	for (size_t i = 0; i < len; ++i)
 	{
@@ -116,9 +116,9 @@ static bool APP_SHELL_hasEscKey(const uint8_t* data, size_t len)
  * @brief Receive every input byte while a stream is running (shell thread context).
  * @retval None
  */
-static void APP_SHELL_streamBypass(const struct shell* sh, uint8_t* data, size_t len)
+static void streamBypass(const struct shell* sh, uint8_t* data, size_t len)
 {
-	if (!APP_SHELL_hasEscKey(data, len))
+	if (!hasEscKey(data, len))
 	{
 		return;
 	}
@@ -135,7 +135,7 @@ static void APP_SHELL_streamBypass(const struct shell* sh, uint8_t* data, size_t
  * @brief Parse and validate a stream interval.
  * @retval true when valid, false otherwise
  */
-static bool APP_SHELL_parseInterval(const struct shell* sh, const char* arg, uint32_t min, uint32_t max, uint32_t& interval)
+static bool parseInterval(const struct shell* sh, const char* arg, uint32_t min, uint32_t max, uint32_t& interval)
 {
 	int err = 0;
 	auto value = shell_strtoul(arg, 10, &err);
@@ -154,7 +154,7 @@ static bool APP_SHELL_parseInterval(const struct shell* sh, const char* arg, uin
  * @brief Check whether the IMU shell context is available.
  * @retval true when available, false otherwise
  */
-static bool APP_SHELL_checkImu(const struct shell* sh)
+static bool checkImu(const struct shell* sh)
 {
 	if ((s_imu == nullptr) || !s_imuReady)
 	{
@@ -168,7 +168,7 @@ static bool APP_SHELL_checkImu(const struct shell* sh)
  * @brief Check whether the microphone shell context is available.
  * @retval true when available, false otherwise
  */
-static bool APP_SHELL_checkMic(const struct shell* sh)
+static bool checkMic(const struct shell* sh)
 {
 	if ((s_mic == nullptr) || !s_micReady)
 	{
@@ -182,7 +182,7 @@ static bool APP_SHELL_checkMic(const struct shell* sh)
  * @brief Print the IMU stream column header.
  * @retval None
  */
-static void APP_SHELL_printImuHeader(const struct shell* sh)
+static void printImuHeader(const struct shell* sh)
 {
 	shell_print(sh, "  time[ms] |  ax[mg]  ay[mg]  az[mg] | gx[mdps] gy[mdps] gz[mdps] | temp[C]");
 }
@@ -191,7 +191,7 @@ static void APP_SHELL_printImuHeader(const struct shell* sh)
  * @brief Print one IMU sample.
  * @retval None
  */
-static void APP_SHELL_printImuSample(const struct shell* sh, uint32_t timeMs, const Imu::Sample& sample)
+static void printImuSample(const struct shell* sh, uint32_t timeMs, const Imu::Sample& sample)
 {
 	shell_print(sh, "%10u | %7d %7d %7d | %8d %8d %8d | %3d.%02d",
 		timeMs,
@@ -204,7 +204,7 @@ static void APP_SHELL_printImuSample(const struct shell* sh, uint32_t timeMs, co
  * @brief Convert an amplitude to dBFS in 0.1 dB unit (0 dBFS = full scale).
  * @retval The amplitude in 0.1 dBFS
  */
-static int32_t APP_SHELL_toDb10(int32_t amplitude)
+static int32_t toDb10(int32_t amplitude)
 {
 	if (amplitude <= 0)
 	{
@@ -219,9 +219,9 @@ static int32_t APP_SHELL_toDb10(int32_t amplitude)
  * @brief Stream IMU samples until ESC is pressed
  * @retval true if stopped by ESC, false on error
  */
-static bool APP_SHELL_runImuStream(const struct shell* sh, uint32_t interval)
+static bool runImuStream(const struct shell* sh, uint32_t interval)
 {
-	APP_SHELL_printImuHeader(sh);
+	printImuHeader(sh);
 
 	const int64_t start = k_uptime_get();
 	int64_t next = start;
@@ -237,7 +237,7 @@ static bool APP_SHELL_runImuStream(const struct shell* sh, uint32_t interval)
 			return false;
 		}
 
-		APP_SHELL_printImuSample(sh, static_cast<uint32_t>(k_uptime_get() - start), sample);
+		printImuSample(sh, static_cast<uint32_t>(k_uptime_get() - start), sample);
 		++count;
 
 		// Skip missed slots instead of bursting when printing takes longer than the interval
@@ -248,7 +248,7 @@ static bool APP_SHELL_runImuStream(const struct shell* sh, uint32_t interval)
 			next = now;
 		}
 
-		if (APP_SHELL_waitForStop(next))
+		if (waitForStop(next))
 		{
 			break;
 		}
@@ -262,7 +262,7 @@ static bool APP_SHELL_runImuStream(const struct shell* sh, uint32_t interval)
  * @brief Run live gesture inference until stopped.
  * @retval true if stopped by ESC, false on error
  */
-static bool APP_SHELL_runGestureStream(const struct shell* sh)
+static bool runGestureStream(const struct shell* sh)
 {
 	static_assert(GestureClassifier::AXIS_COUNT == 3, "Gesture model requires three IMU axes");
 	static_assert(GestureClassifier::SAMPLE_COUNT > 0, "Gesture model window must not be empty");
@@ -356,7 +356,7 @@ static bool APP_SHELL_runGestureStream(const struct shell* sh)
 		{
 			next = now + EI_CLASSIFIER_INTERVAL_MS;
 		}
-		if (APP_SHELL_waitForStop(next))
+		if (waitForStop(next))
 		{
 			break;
 		}
@@ -370,7 +370,7 @@ static bool APP_SHELL_runGestureStream(const struct shell* sh)
  * @brief Print the mic level until ESC is pressed
  * @retval true if stopped by ESC, false on error
  */
-static bool APP_SHELL_runMicMonitor(const struct shell* sh, uint32_t interval)
+static bool runMicMonitor(const struct shell* sh, uint32_t interval)
 {
 	// The level is computed per 100 ms block
 	const uint32_t blocksPerReport = interval / Mic::BLOCK_MS;
@@ -410,7 +410,7 @@ static bool APP_SHELL_runMicMonitor(const struct shell* sh, uint32_t interval)
 			sumSquare += static_cast<double>(level.m_rms) * level.m_rms;
 			flat = flat && level.m_flat;
 
-			if (APP_SHELL_isStopRequested())
+			if (isStopRequested())
 			{
 				stopped = true;
 				break;
@@ -423,7 +423,7 @@ static bool APP_SHELL_runMicMonitor(const struct shell* sh, uint32_t interval)
 		}
 
 		const auto rms = static_cast<int32_t>(std::sqrt(sumSquare / blocksPerReport));
-		const int32_t db10 = APP_SHELL_toDb10(rms);
+		const int32_t db10 = toDb10(rms);
 		const int32_t bars = std::clamp((db10 - METER_MIN_DB10) / METER_DB10_PER_CHAR, int32_t{0}, METER_WIDTH);
 
 		for (int32_t i = 0; i < METER_WIDTH; ++i)
@@ -453,7 +453,7 @@ static bool APP_SHELL_runMicMonitor(const struct shell* sh, uint32_t interval)
  * @brief Execute a requested stream in a worker thread.
  * @retval None
  */
-static void APP_SHELL_streamThread(void* p1, void* p2, void* p3)
+static void runStreamThread(void* p1, void* p2, void* p3)
 {
 	ARG_UNUSED(p2);
 	ARG_UNUSED(p3);
@@ -462,15 +462,15 @@ static void APP_SHELL_streamThread(void* p1, void* p2, void* p3)
 
 	if (request->m_type == StreamType::Imu)
 	{
-		(void)APP_SHELL_runImuStream(request->m_sh, request->m_interval);
+		(void)runImuStream(request->m_sh, request->m_interval);
 	}
 	else if (request->m_type == StreamType::Gesture)
 	{
-		(void)APP_SHELL_runGestureStream(request->m_sh);
+		(void)runGestureStream(request->m_sh);
 	}
 	else
 	{
-		(void)APP_SHELL_runMicMonitor(request->m_sh, request->m_interval);
+		(void)runMicMonitor(request->m_sh, request->m_interval);
 	}
 
 	k_sem_give(&s_doneSem);
@@ -485,12 +485,12 @@ static void APP_SHELL_streamThread(void* p1, void* p2, void* p3)
 }
 
 /**
- * @brief Start the stream thread and pass every key input to APP_SHELL_streamBypass()
+ * @brief Start the stream thread and pass every key input to streamBypass().
  * @details The command returns right away. The shell thread has to keep running to
  *          receive ESC, so the stream itself runs on a separate thread.
  * @retval 0 on success
  */
-static int APP_SHELL_startStream(const struct shell* sh, StreamType type, uint32_t interval)
+static int startStream(const struct shell* sh, StreamType type, uint32_t interval)
 {
 	if (s_streamThreadCreated)
 	{
@@ -506,10 +506,10 @@ static int APP_SHELL_startStream(const struct shell* sh, StreamType type, uint32
 	s_request.m_type = type;
 	s_request.m_interval = interval;
 
-	shell_set_bypass(sh, APP_SHELL_streamBypass);
+	shell_set_bypass(sh, streamBypass);
 
 	k_thread_create(&s_streamThread, s_streamStack, K_THREAD_STACK_SIZEOF(s_streamStack),
-		APP_SHELL_streamThread, &s_request, NULL, NULL,
+		runStreamThread, &s_request, NULL, NULL,
 		STREAM_THREAD_PRIORITY, 0, K_NO_WAIT);
 	k_thread_name_set(&s_streamThread, "stream");
 	s_streamThreadCreated = true;
@@ -521,12 +521,12 @@ static int APP_SHELL_startStream(const struct shell* sh, StreamType type, uint32
  * @brief Handle the imu info shell command.
  * @retval 0 on success, negative errno otherwise
  */
-static int APP_SHELL_cmdImuInfo(const struct shell* sh, size_t argc, char** argv)
+static int cmdImuInfo(const struct shell* sh, size_t argc, char** argv)
 {
 	ARG_UNUSED(argc);
 	ARG_UNUSED(argv);
 
-	if (!APP_SHELL_checkImu(sh))
+	if (!checkImu(sh))
 	{
 		return -ENODEV;
 	}
@@ -539,12 +539,12 @@ static int APP_SHELL_cmdImuInfo(const struct shell* sh, size_t argc, char** argv
  * @brief Handle the imu read shell command.
  * @retval 0 on success, negative errno otherwise
  */
-static int APP_SHELL_cmdImuRead(const struct shell* sh, size_t argc, char** argv)
+static int cmdImuRead(const struct shell* sh, size_t argc, char** argv)
 {
 	ARG_UNUSED(argc);
 	ARG_UNUSED(argv);
 
-	if (!APP_SHELL_checkImu(sh))
+	if (!checkImu(sh))
 	{
 		return -ENODEV;
 	}
@@ -557,8 +557,8 @@ static int APP_SHELL_cmdImuRead(const struct shell* sh, size_t argc, char** argv
 		return ret;
 	}
 
-	APP_SHELL_printImuHeader(sh);
-	APP_SHELL_printImuSample(sh, k_uptime_get_32(), sample);
+	printImuHeader(sh);
+	printImuSample(sh, k_uptime_get_32(), sample);
 	return 0;
 }
 
@@ -566,56 +566,56 @@ static int APP_SHELL_cmdImuRead(const struct shell* sh, size_t argc, char** argv
  * @brief Handle the imu stream shell command.
  * @retval 0 on success, negative errno otherwise
  */
-static int APP_SHELL_cmdImuStream(const struct shell* sh, size_t argc, char** argv)
+static int cmdImuStream(const struct shell* sh, size_t argc, char** argv)
 {
 	ARG_UNUSED(argc);
 
-	if (!APP_SHELL_checkImu(sh))
+	if (!checkImu(sh))
 	{
 		return -ENODEV;
 	}
 
 	uint32_t interval = 0;
-	if (!APP_SHELL_parseInterval(sh, argv[1], IMU_MIN_INTERVAL_MS, IMU_MAX_INTERVAL_MS, interval))
+	if (!parseInterval(sh, argv[1], IMU_MIN_INTERVAL_MS, IMU_MAX_INTERVAL_MS, interval))
 	{
 		return -EINVAL;
 	}
 
 	shell_print(sh, "Streaming IMU every %u ms. Press ESC to stop.", interval);
-	return APP_SHELL_startStream(sh, StreamType::Imu, interval);
+	return startStream(sh, StreamType::Imu, interval);
 }
 
 /**
  * @brief Handle the imu classify shell command.
  * @retval 0 on success, negative errno otherwise
  */
-static int APP_SHELL_cmdImuClassify(const struct shell* sh, size_t argc, char** argv)
+static int cmdImuClassify(const struct shell* sh, size_t argc, char** argv)
 {
 	ARG_UNUSED(argc);
 	ARG_UNUSED(argv);
 
-	if (!APP_SHELL_checkImu(sh))
+	if (!checkImu(sh))
 	{
 		return -ENODEV;
 	}
 
 	shell_print(sh, "Starting live gesture inference. Press ESC to stop.");
-	return APP_SHELL_startStream(sh, StreamType::Gesture, EI_CLASSIFIER_INTERVAL_MS);
+	return startStream(sh, StreamType::Gesture, EI_CLASSIFIER_INTERVAL_MS);
 }
 
 /**
  * @brief Handle the mic monitor shell command.
  * @retval 0 on success, negative errno otherwise
  */
-static int APP_SHELL_cmdMicMonitor(const struct shell* sh, size_t argc, char** argv)
+static int cmdMicMonitor(const struct shell* sh, size_t argc, char** argv)
 {
-	if (!APP_SHELL_checkMic(sh))
+	if (!checkMic(sh))
 	{
 		return -ENODEV;
 	}
 
 	uint32_t interval = MIC_DEFAULT_INTERVAL_MS;
-	if ((argc > 1) && !APP_SHELL_parseInterval(sh, argv[1], Mic::BLOCK_MS, MIC_MAX_INTERVAL_MS, interval))
+	if ((argc > 1) && !parseInterval(sh, argv[1], Mic::BLOCK_MS, MIC_MAX_INTERVAL_MS, interval))
 	{
 		return -EINVAL;
 	}
@@ -624,17 +624,17 @@ static int APP_SHELL_cmdMicMonitor(const struct shell* sh, size_t argc, char** a
 	interval = (interval / Mic::BLOCK_MS) * Mic::BLOCK_MS;
 
 	shell_print(sh, "Monitoring mic every %u ms. Press ESC to stop.", interval);
-	return APP_SHELL_startStream(sh, StreamType::Mic, interval);
+	return startStream(sh, StreamType::Mic, interval);
 }
 
 SHELL_STATIC_SUBCMD_SET_CREATE(s_subImu,
-	SHELL_CMD(info, NULL, "Show IMU chip information", APP_SHELL_cmdImuInfo),
-	SHELL_CMD(read, NULL, "Read one accel/gyro/temperature sample", APP_SHELL_cmdImuRead),
-	SHELL_CMD(classify, NULL, "Classify live gestures until ESC is pressed", APP_SHELL_cmdImuClassify),
+	SHELL_CMD(info, NULL, "Show IMU chip information", cmdImuInfo),
+	SHELL_CMD(read, NULL, "Read one accel/gyro/temperature sample", cmdImuRead),
+	SHELL_CMD(classify, NULL, "Classify live gestures until ESC is pressed", cmdImuClassify),
 	SHELL_CMD_ARG(stream, NULL,
 		"Stream samples until ESC is pressed\n"
 		"Usage: imu stream <interval_ms> (10 ~ 60000)",
-		APP_SHELL_cmdImuStream, 2, 0),
+		cmdImuStream, 2, 0),
 	SHELL_SUBCMD_SET_END
 );
 SHELL_CMD_REGISTER(imu, &s_subImu, "IMU (LSM6DS3TR-C) commands", NULL);
@@ -643,7 +643,7 @@ SHELL_STATIC_SUBCMD_SET_CREATE(s_subMic,
 	SHELL_CMD_ARG(monitor, NULL,
 		"Print the sound level until ESC is pressed\n"
 		"Usage: mic monitor [interval_ms] (100 ~ 10000, multiple of 100, default 100)",
-		APP_SHELL_cmdMicMonitor, 1, 1),
+		cmdMicMonitor, 1, 1),
 	SHELL_SUBCMD_SET_END
 );
 SHELL_CMD_REGISTER(mic, &s_subMic, "PDM microphone commands", NULL);

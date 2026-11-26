@@ -33,10 +33,10 @@ static Button s_button(s_gpioButton);
 static Imu s_imu(s_i2cImu);
 static Mic s_mic(*s_dmic);
 
-static const char* MAIN_resultString(bool pass);
-static void MAIN_printChipInfo();
-static bool MAIN_checkLed(Led& led);
-static int MAIN_checkMic(Mic& mic, Mic::Level& level);
+static const char* getResultString(bool pass);
+static void printChipInfo();
+static bool checkLed(Led& led);
+static int checkMic(Mic& mic, Mic::Level& level);
 
 /**
  * @brief Hardware check application entry point.
@@ -48,25 +48,25 @@ int main(void)
     printk(" XIAO nRF54L15 Sense - HW check (%s)\n", CONFIG_BOARD_TARGET);
     printk("==============================================\n");
 
-    MAIN_printChipInfo();
+    printChipInfo();
 
-    const bool ledOk = MAIN_checkLed(s_led);
+    const bool ledOk = checkLed(s_led);
     const bool buttonOk = s_button.isConfigured();
 
     const auto imuRet = s_imu.initialize();
     const bool imuOk = (imuRet == 0);
 
     Mic::Level micLevel = {};
-    const auto micRet = MAIN_checkMic(s_mic, micLevel);
+    const auto micRet = checkMic(s_mic, micLevel);
     const bool micOk = (micRet == 0);
 
     printk("\n---------------- Self test -------------------\n");
-    printk("[%s] LED    (P2.00)\n", MAIN_resultString(ledOk));
-    printk("[%s] Button (P0.00)\n", MAIN_resultString(buttonOk));
+    printk("[%s] LED    (P2.00)\n", getResultString(ledOk));
+    printk("[%s] Button (P0.00)\n", getResultString(buttonOk));
     printk("[%s] IMU    WHO_AM_I=0x%02X (%s), ret=%d\n",
-        MAIN_resultString(imuOk), s_imu.getWhoAmI(), s_imu.getChipName(), imuRet);
+        getResultString(imuOk), s_imu.getWhoAmI(), s_imu.getChipName(), imuRet);
     printk("[%s] Mic    PDM 16 kHz mono, ret=%d, peak=%d%s\n",
-        MAIN_resultString(micOk), micRet, micLevel.m_peak, micLevel.m_flat ? " (FLAT)" : "");
+        getResultString(micOk), micRet, micLevel.m_peak, micLevel.m_flat ? " (FLAT)" : "");
     printk("----------------------------------------------\n");
     printk("Shell commands: imu info | imu read | imu stream <ms> | imu classify | mic monitor [ms]\n");
     printk("Press ESC to stop streaming.\n\n");
@@ -94,7 +94,7 @@ int main(void)
  * @brief Convert a test result to PASS or FAIL text.
  * @retval PASS for a passing result, FAIL otherwise
  */
-static const char* MAIN_resultString(bool pass)
+static const char* getResultString(bool pass)
 {
     return pass ? "PASS" : "FAIL";
 }
@@ -103,7 +103,7 @@ static const char* MAIN_resultString(bool pass)
  * @brief Print the device identity and reset cause.
  * @retval None
  */
-static void MAIN_printChipInfo()
+static void printChipInfo()
 {
     uint8_t id[16] = {0};
     const auto len = hwinfo_get_device_id(id, sizeof(id));
@@ -134,7 +134,7 @@ static void MAIN_printChipInfo()
  * @brief Check and visually exercise the LED.
  * @retval true when configured, false otherwise
  */
-static bool MAIN_checkLed(Led& led)
+static bool checkLed(Led& led)
 {
     if (!led.isConfigured())
     {
@@ -155,7 +155,7 @@ static bool MAIN_checkLed(Led& led)
  * @brief Capture one block to check the microphone.
  * @retval 0 on success, negative errno otherwise
  */
-static int MAIN_checkMic(Mic& mic, Mic::Level& level)
+static int checkMic(Mic& mic, Mic::Level& level)
 {
     auto ret = mic.initialize();
     if (ret == 0)

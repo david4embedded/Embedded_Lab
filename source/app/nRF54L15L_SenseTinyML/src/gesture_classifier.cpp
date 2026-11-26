@@ -14,13 +14,13 @@
 #include <cstring>
 #include <iterator>
 
-static const char* GESTURE_CLASSIFIER_displayLabel(const char* label);
+static const char* displayLabel(const char* label);
 
 /**
  * @brief Convert generated Edge Impulse labels to display labels.
  * @retval Pointer to the display label
  */
-static const char* GESTURE_CLASSIFIER_displayLabel(const char* label)
+static const char* displayLabel(const char* label)
 {
     if (std::strncmp(label, "acc_gesture_idle_", sizeof("acc_gesture_idle_") - 1) == 0)
     {
@@ -79,11 +79,11 @@ int GestureClassifier::Classify(const float* interleavedAccel, std::size_t value
             return left.value < right.value;
         });
 
-    result.m_prediction = GESTURE_CLASSIFIER_displayLabel(best->label);
+    result.m_prediction = displayLabel(best->label);
     result.m_confidence = best->value;
     for (std::size_t index = 0; index < CLASS_COUNT; ++index)
     {
-        result.m_labels[index] = GESTURE_CLASSIFIER_displayLabel(inference.classification[index].label);
+        result.m_labels[index] = displayLabel(inference.classification[index].label);
         result.m_scores[index] = inference.classification[index].value;
     }
 

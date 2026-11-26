@@ -30,13 +30,13 @@ constexpr int32_t GYRO_CENTI_MDPS_PER_LSB = 875;
 constexpr int32_t TEMP_LSB_PER_C = 256;
 constexpr int32_t TEMP_OFFSET_CENTI_C = 2500;
 
-static int16_t IMU_toInt16(const uint8_t* buf);
+static int16_t toInt16(const uint8_t* buf);
 
 /**
  * @brief Convert two little-endian bytes to a signed 16-bit value.
  * @retval The converted signed value
  */
-static int16_t IMU_toInt16(const uint8_t* buf)
+static int16_t toInt16(const uint8_t* buf)
 {
     return static_cast<int16_t>(static_cast<uint16_t>(buf[0]) | (static_cast<uint16_t>(buf[1]) << 8));
 }
@@ -92,12 +92,12 @@ int Imu::read(Sample& sample)
         return ret;
     }
 
-    sample.m_tempCentiC = TEMP_OFFSET_CENTI_C + (IMU_toInt16(&buf[0]) * 100) / TEMP_LSB_PER_C;
+    sample.m_tempCentiC = TEMP_OFFSET_CENTI_C + (toInt16(&buf[0]) * 100) / TEMP_LSB_PER_C;
 
     for (int axis = 0; axis < 3; ++axis)
     {
-        sample.m_gyroMdps[axis] = (IMU_toInt16(&buf[2 + (axis * 2)]) * GYRO_CENTI_MDPS_PER_LSB) / 100;
-        sample.m_accelMg[axis] = (IMU_toInt16(&buf[8 + (axis * 2)]) * ACCEL_UG_PER_LSB) / 1000;
+        sample.m_gyroMdps[axis] = (toInt16(&buf[2 + (axis * 2)]) * GYRO_CENTI_MDPS_PER_LSB) / 100;
+        sample.m_accelMg[axis] = (toInt16(&buf[8 + (axis * 2)]) * ACCEL_UG_PER_LSB) / 1000;
     }
 
     return 0;
